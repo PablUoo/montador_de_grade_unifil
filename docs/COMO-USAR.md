@@ -52,7 +52,7 @@ Os arquivos saem com o nome `Nome-do-Aluno_Matricula_Turma_B4-2026.pdf`.
 
    O GitHub Actions publica o site sozinho.
 
-A planilha de ofertas também pode ser feita à mão, com as abas e colunas abaixo:
+As ofertas vêm só do próprio projeto: a página lê os arquivos de `public/jobs/ofertas/`. Formato atual da planilha gerada (pode mudar quando houver um padrão oficial):
 
 - **Aulas:** Código, Disciplina, Dia (Segunda-feira … Sábado), Horário (`19:00 - 20:30` ou `20:45 - 22:15`), Turma (ex.: `E1/2026`), Curso (`CC`/`ES`), Sala, Professor, Tipo, C.H.
 - **Digitais:** Código, Disciplina, Turma, Curso, Professor, C.H.
@@ -63,4 +63,4 @@ A planilha de ofertas também pode ser feita à mão, com as abas e colunas abai
 ./scripts/servir.sh
 ```
 
-Abrir o `public/index.html` direto (duplo clique) não carrega as ofertas, porque o navegador bloqueia leitura de arquivos locais. Nesse caso use o botão "Abrir planilha de ofertas (.xlsx)".
+Abrir o `public/index.html` direto (duplo clique) não carrega as ofertas, porque o navegador bloqueia leitura de arquivos locais. Use sempre o `servir.sh` ou o site publicado.

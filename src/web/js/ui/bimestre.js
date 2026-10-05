@@ -25,23 +25,12 @@ function abrirOferta(bim, dados) {
 async function selecionarBimestre(bim) {
   $('bimStatus').textContent = `Carregando ofertas de ${bim}…`;
   try { abrirOferta(bim, await baixarOfertas(bim)); return true; }
-  catch (e) { $('bimStatus').textContent = `Não consegui carregar ${bim}: ${e.message}. Se abriu o arquivo direto do computador, use “Abrir planilha de ofertas”.`; return false; }
+  catch (e) { $('bimStatus').textContent = `Não consegui carregar ${bim}: ${e.message}. Tente recarregar a página.`; return false; }
 }
 
 $('bimOpcoes').addEventListener('click', e => {
   const b = e.target.closest('[data-bim]'); if (!b || b.disabled || b.dataset.bim === BIM) return;
   selecionarBimestre(b.dataset.bim);
-});
-
-// alternativa sem internet/servidor: abrir a planilha de ofertas pelo computador (nome do arquivo = bimestre)
-$('btnOfertaArq').onclick = () => $('ofertaIn').click();
-$('ofertaIn').addEventListener('change', async e => {
-  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
-  try {
-    const bim = (f.name.match(/B\d-\d{4}/i)?.[0] || f.name.replace(/\.xlsx$/i, '')).toUpperCase();
-    abrirOferta(bim, lerPlanilhaOfertas(await f.arrayBuffer()));
-    toast(`Ofertas de ${bim} abertas a partir do arquivo`);
-  } catch (err) { toast('Não consegui ler a planilha de ofertas: ' + err.message); }
 });
 
 async function iniciarBimestres() {
@@ -54,5 +43,5 @@ async function iniciarBimestres() {
   if (inicial) await selecionarBimestre(inicial);
   else $('bimStatus').textContent = BIMESTRES.bimestres.length
     ? 'Nenhum bimestre tem oferta publicada ainda.'
-    : 'Não consegui ler a lista de ofertas do site. Se abriu o arquivo direto do computador, use “Abrir planilha de ofertas” e escolha o B4-2026.xlsx.';
+    : 'Não consegui ler a lista de ofertas do site. Tente recarregar a página.';
 }
