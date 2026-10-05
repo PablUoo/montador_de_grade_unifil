@@ -1,0 +1,1153 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Monte sua grade de segunda a sábado com as disciplinas ofertadas pela UniFil em cada bimestre.">
+<title>Montador de Grade UniFil</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..800&family=JetBrains+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: a timetable sheet like the PDF — orange day header, two class rows split by the interval band; picker opens as a dialog. */
+:root {
+  --bg: #f6f4f1;
+  --sheet: #ffffff;
+  --fg: #23201d;
+  --muted: #6f6861;
+  --line: #e4ded7;
+  --accent: #e2570f;
+  --accent-ink: #ffffff;
+  --accent-soft: #fdeee4;
+  --chosen: #fff7f1;
+  --ok: #1f7a4a;
+  --ok-soft: #e6f4ec;
+  --warn: #a8460c;
+  --band: #eeeae5;
+  --prio: #c21d5b;
+  --prio-ink: #ffffff;
+  --prio-soft: #fdebf2;
+  --shadow: 0 1px 2px rgba(60,40,20,.06), 0 6px 24px rgba(60,40,20,.08);
+  --f-display: "Archivo", "Segoe UI", system-ui, sans-serif;
+  --f-body: "Archivo", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #171513; --sheet: #201d1a; --fg: #efe9e3; --muted: #a59c93; --line: #37322d;
+  --accent: #f07a3a; --accent-ink: #1b120c; --accent-soft: #3a2518; --chosen: #2a211b;
+  --ok: #6fcf98; --ok-soft: #1c3027; --warn: #f2a46f; --band: #26221f; --prio: #ff6fa3; --prio-ink: #2a0715; --prio-soft: #3a1826;
+  --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 24px rgba(0,0,0,.35); color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #171513; --sheet: #201d1a; --fg: #efe9e3; --muted: #a59c93; --line: #37322d;
+  --accent: #f07a3a; --accent-ink: #1b120c; --accent-soft: #3a2518; --chosen: #2a211b;
+  --ok: #6fcf98; --ok-soft: #1c3027; --warn: #f2a46f; --band: #26221f; --prio: #ff6fa3; --prio-ink: #2a0715; --prio-soft: #3a1826;
+  --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 24px rgba(0,0,0,.35); color-scheme: dark; }
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--f-body); font-size: 15px; line-height: 1.45; }
+.wrap { max-width: 1280px; margin: 0 auto; padding-inline: 16px; padding-block: 24px 48px; display: grid; gap: 20px; }
+header.top { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 16px; }
+h1 { font-family: var(--f-display); font-stretch: 112%; font-weight: 800; font-size: clamp(1.6rem, 3vw, 2.2rem); margin: 0; letter-spacing: -.01em; text-wrap: balance; }
+h1 span { color: var(--accent); }
+.sub { color: var(--muted); margin: 4px 0 0; max-width: 62ch; }
+h2 { font-family: var(--f-display); font-stretch: 110%; font-size: 1.1rem; margin: 0; }
+.eyebrow { font-size: .72rem; text-transform: uppercase; letter-spacing: .09em; color: var(--muted); font-weight: 600; }
+
+.filters { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; background: var(--sheet); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+.field { display: grid; gap: 4px; min-width: 0; }
+.field label { font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 600; }
+select, input[type=search] { font: inherit; font-size: .92rem; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 7px; padding: 7px 10px; max-width: 100%; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 7px; overflow: hidden; }
+.seg button { font: inherit; font-size: .88rem; padding: 7px 12px; border: 0; background: var(--bg); color: var(--fg); cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed=true] { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.btn { font: inherit; font-size: .88rem; font-weight: 600; padding: 8px 14px; border-radius: 7px; border: 1px solid var(--line); background: var(--sheet); color: var(--fg); cursor: pointer; }
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.danger { color: var(--warn); }
+.btn.small { font-size: .78rem; padding: 4px 9px; }
+button:focus-visible, select:focus-visible, input:focus-visible, .opt:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* timetable: explicit CSS grid (time column + 6 days); stacks day by day under 760px */
+.sheet { background: var(--sheet); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); overflow: hidden; }
+.week { display: grid; grid-template-columns: 64px repeat(6, minmax(0, 1fr)); grid-template-rows: auto auto auto auto; }
+.week > * { min-width: 0; }
+.dh { background: var(--accent); color: var(--accent-ink); font-family: var(--f-display); font-weight: 700; font-size: .88rem; padding: 10px 6px; text-align: center; border-left: 1px solid rgba(255,255,255,.22); }
+.dh.corner { border-left: 0; }
+.tl { grid-column: 1; background: var(--accent-soft); color: var(--accent); font-family: var(--f-mono); font-size: .76rem; font-weight: 600; display: grid; align-content: center; justify-items: center; gap: 2px; padding: 8px 4px; border-top: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+.tl i { font-style: normal; color: var(--muted); font-size: .7rem; }
+.band { grid-column: 1 / -1; background: var(--band); text-align: center; font-size: .72rem; letter-spacing: .12em; font-weight: 700; color: var(--muted); padding: 6px; border-top: 1px solid var(--line); }
+.cell { padding: 8px; border-top: 1px solid var(--line); border-left: 1px solid var(--line); display: flex; flex-direction: column; min-height: 168px; }
+.cell .mlabel { display: none; }
+
+.add { flex: 1; display: grid; place-items: center; align-content: center; gap: 4px; border: 1.5px dashed var(--line); border-radius: 8px; background: transparent; color: var(--muted); font: inherit; font-size: .82rem; cursor: pointer; padding: 10px; transition: border-color .15s, background .15s; }
+.add:hover { border-color: var(--accent); background: var(--accent-soft); color: var(--fg); }
+.add b { font-size: 1.5rem; line-height: 1; color: var(--accent); font-weight: 500; }
+.add small { font-size: .72rem; }
+.none { flex: 1; display: grid; place-items: center; color: var(--muted); font-size: .8rem; border-radius: 8px; background: repeating-linear-gradient(135deg, transparent 0 8px, var(--band) 8px 9px); }
+
+.card { flex: 1; border: 1px solid var(--line); border-radius: 8px; background: var(--chosen); padding: 10px 8px 8px; text-align: center; display: flex; flex-direction: column; gap: 5px; align-items: center; min-width: 0; }
+.card .nm { font-weight: 700; font-size: .84rem; line-height: 1.28; overflow-wrap: break-word; hyphens: auto; }
+.code { font-family: var(--f-mono); font-size: .72rem; font-weight: 600; color: var(--accent); border: 1.5px solid currentColor; border-radius: 4px; padding: 1px 6px; letter-spacing: .02em; white-space: nowrap; }
+.card .meta { font-size: .76rem; color: var(--muted); line-height: 1.3; }
+.card .room { font-family: var(--f-mono); font-weight: 600; font-size: .82rem; color: var(--fg); }
+.card .tur { font-size: .72rem; color: var(--muted); }
+.card .acts { display: flex; gap: 6px; justify-content: center; margin-top: auto; padding-top: 4px; flex-wrap: wrap; }
+
+@media (max-width: 760px) {
+  .week { display: flex; flex-direction: column; }
+  .dh:not(.corner), .tl, .band, .dh.corner { display: none; }
+  .cell { border-left: 0; min-height: 0; padding: 10px 12px; }
+  .cell .mlabel { display: flex; justify-content: space-between; align-items: baseline; font-size: .78rem; font-weight: 600; margin-bottom: 6px; }
+  .cell .mlabel b { font-family: var(--f-display); font-size: .95rem; color: var(--accent); }
+  .cell.h1 .mlabel b { visibility: hidden; }
+  .cell.h0 { border-top: 2px solid var(--accent); }
+  .add { padding: 14px; grid-auto-flow: column; gap: 8px; }
+  .card { text-align: left; align-items: flex-start; }
+  .card .acts { justify-content: flex-start; }
+}
+
+/* picker: centered dialog on desktop, bottom sheet on phones */
+.scrim { position: fixed; inset: 0; background: rgba(20,14,10,.5); z-index: 10; }
+.panel { position: fixed; z-index: 11; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(620px, calc(100% - 32px)); max-height: min(86vh, 760px); background: var(--sheet); border-radius: 14px; display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(0,0,0,.3); overflow: hidden; }
+@media (max-width: 640px) {
+  .panel { left: 0; right: 0; bottom: 0; top: auto; transform: none; width: 100%; max-height: 88vh; border-radius: 14px 14px 0 0; padding-bottom: env(safe-area-inset-bottom, 0px); }
+}
+.panel-head { padding: 16px; border-bottom: 1px solid var(--line); display: grid; gap: 10px; }
+.panel-head .row { display: flex; justify-content: space-between; align-items: start; gap: 12px; }
+.panel-list { overflow-y: auto; padding: 12px 16px 24px; display: grid; gap: 10px; align-content: start; }
+.opt { text-align: left; font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 9px; padding: 11px 12px; cursor: pointer; display: grid; gap: 5px; }
+.opt:hover { border-color: var(--accent); }
+.opt.current { border-color: var(--accent); background: var(--accent-soft); }
+.opt .top { display: flex; gap: 8px; align-items: baseline; justify-content: space-between; }
+.opt .nm { font-weight: 700; font-size: .92rem; line-height: 1.3; }
+.opt .meta { font-size: .82rem; color: var(--muted); }
+.chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.chip { font-size: .72rem; font-weight: 600; padding: 2px 7px; border-radius: 999px; background: var(--band); color: var(--fg); white-space: nowrap; }
+.chip.cc { background: #e3edfb; color: #1d4f91; }
+.chip.es { background: #efe5fa; color: #5b2d91; }
+:root[data-theme="dark"] .chip.cc { background: #1d2a3d; color: #9cc2f5; }
+:root[data-theme="dark"] .chip.es { background: #2a2038; color: #c9a7f2; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .chip.cc { background: #1d2a3d; color: #9cc2f5; } :root:not([data-theme="light"]) .chip.es { background: #2a2038; color: #c9a7f2; } }
+.chip.in { background: var(--ok-soft); color: var(--ok); }
+.also { font-size: .78rem; color: var(--muted); }
+.check { display: flex; gap: 8px; align-items: center; font-size: .85rem; }
+.empty-list { color: var(--muted); padding: 20px 4px; }
+
+/* lower section */
+.lower { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 860px) { .lower { grid-template-columns: minmax(0, 1fr); } }
+.box { background: var(--sheet); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: grid; gap: 12px; min-width: 0; }
+.box .head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.summary { width: 100%; border-collapse: collapse; font-size: .86rem; }
+.summary th { text-align: left; font-size: .7rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); padding: 6px 8px; border-bottom: 1px solid var(--line); }
+.summary td { padding: 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.summary tr.sep td { font-size: .7rem; text-transform: uppercase; letter-spacing: .08em; font-weight: 700; color: var(--muted); background: var(--band); padding: 6px 8px; }
+.chip.dg { background: var(--ok-soft); color: var(--ok); }
+.summary td.n { font-variant-numeric: tabular-nums; text-align: right; }
+.tbl-wrap { overflow-x: auto; }
+.stats { display: flex; gap: 18px; flex-wrap: wrap; }
+.stat b { display: block; font-family: var(--f-display); font-stretch: 110%; font-size: 1.5rem; font-variant-numeric: tabular-nums; }
+.stat span { font-size: .75rem; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+.dig { display: grid; gap: 8px; }
+.dig label { display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; align-items: start; padding: 10px; border: 1px solid var(--line); border-radius: 8px; cursor: pointer; background: var(--bg); }
+.dig label:has(input:checked) { border-color: var(--ok); background: var(--ok-soft); }
+.dig input { margin-top: 3px; accent-color: var(--ok); }
+.dig .nm { font-weight: 600; font-size: .88rem; }
+.dig .meta { grid-column: 2; font-size: .78rem; color: var(--muted); }
+.toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 9px 16px; border-radius: 8px; font-size: .88rem; z-index: 20; max-width: calc(100% - 32px); }
+.note { font-size: .8rem; color: var(--muted); }
+textarea.copy { width: 100%; min-height: 140px; font-family: var(--f-mono); font-size: .78rem; background: var(--bg); color: var(--fg); border: 1px solid var(--line); border-radius: 8px; padding: 10px; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end; }
+.tgroup { display: flex; gap: 6px; flex-wrap: wrap; }
+.tgroup + .tgroup { padding-left: 10px; border-left: 1px solid var(--line); }
+@media (max-width: 640px) { .toolbar { justify-content: flex-start; } .tgroup + .tgroup { padding-left: 0; border-left: 0; } }
+.btn[disabled] { opacity: .55; cursor: progress; }
+/* pendências / prioridade */
+.prio-toggle { align-self: center; padding: 6px 10px; border: 1px solid var(--line); border-radius: 7px; background: var(--prio-soft); font-weight: 600; cursor: pointer; }
+.prio-toggle input { accent-color: var(--prio); }
+.chip.prio { background: var(--prio); color: var(--prio-ink); letter-spacing: .04em; }
+.opt.is-prio { border-color: var(--prio); background: var(--prio-soft); box-shadow: inset 4px 0 0 var(--prio); }
+.card.is-prio { border-color: var(--prio); box-shadow: inset 0 3px 0 var(--prio); }
+.add .pcount { font-size: .72rem; font-weight: 700; color: var(--prio-ink); background: var(--prio); border-radius: 999px; padding: 1px 8px; }
+.add.has-prio { border-color: var(--prio); background: var(--prio-soft); color: var(--fg); }
+.pend-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px; }
+.pitem { text-align: left; font: inherit; color: var(--fg); border: 1px solid var(--line); border-radius: 9px; background: var(--bg); padding: 10px 12px; display: grid; gap: 4px; align-content: start; min-width: 0; }
+button.pitem { cursor: pointer; }
+button.pitem:hover { border-color: var(--prio); }
+.pitem.active { border-color: var(--prio); background: var(--prio-soft); }
+.pitem .top { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+.pitem .nm { font-weight: 600; font-size: .86rem; line-height: 1.3; }
+.pitem .st { font-size: .76rem; color: var(--muted); }
+.pitem.off { opacity: .62; }
+.pitem .done { color: var(--ok); font-weight: 700; }
+.dig label.is-prio { border-color: var(--prio); }
+/* carga horária */
+.chpill { font-size: .7rem; font-weight: 600; color: var(--muted); background: var(--band); border-radius: 999px; padding: 1px 8px; font-variant-numeric: tabular-nums; }
+.card.over { border-color: var(--warn); }
+.warnline { font-size: .7rem; font-weight: 700; color: var(--warn); }
+.pitem .ch { font-family: var(--f-mono); font-size: .76rem; font-weight: 600; color: var(--muted); margin-left: auto; margin-right: 8px; }
+.over { color: var(--warn); }
+.ok { color: var(--ok); }
+.short { color: var(--muted); }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+.toolbar { align-items: flex-end; }
+/* identificação do aluno */
+.ident { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; background: var(--sheet); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+.ident .grow { flex: 1 1 240px; }
+.ident input { font: inherit; font-size: .92rem; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 7px; padding: 7px 10px; width: 100%; min-width: 0; }
+.ident .field:not(.grow) { flex: 0 1 170px; }
+.ident-note { flex-basis: 100%; margin: 0; }
+/* escolha do bimestre */
+.bim { background: var(--sheet); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: grid; gap: 12px; box-shadow: var(--shadow); }
+.bim-head { display: flex; justify-content: space-between; align-items: start; gap: 12px; flex-wrap: wrap; }
+.bim-head .note { margin: 4px 0 0; }
+.bim-opcoes { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
+.bim-op { font: inherit; color: var(--fg); background: var(--bg); border: 1.5px solid var(--line); border-radius: 10px; padding: 12px 14px; cursor: pointer; display: grid; gap: 2px; text-align: left; transition: border-color .15s, background .15s; }
+.bim-op b { font-family: var(--f-display); font-stretch: 112%; font-size: 1.6rem; line-height: 1; color: var(--accent); }
+.bim-op span { font-family: var(--f-mono); font-size: .8rem; color: var(--muted); }
+.bim-op small { font-size: .72rem; color: var(--muted); margin-top: 4px; }
+.bim-op:hover:not([disabled]) { border-color: var(--accent); }
+.bim-op.on { border-color: var(--accent); background: var(--accent-soft); box-shadow: inset 0 -3px 0 var(--accent); }
+.bim-op.on small { color: var(--accent); font-weight: 700; }
+.bim-op[disabled] { cursor: not-allowed; opacity: .5; }
+.bim-op[disabled] b { color: var(--muted); }
+body.sem-oferta .sheet, body.sem-oferta .lower { opacity: .45; pointer-events: none; }
+/* pendências: importação */
+.pend-acoes { display: flex; gap: 8px; flex-wrap: wrap; }
+.pend-vazio { grid-column: 1 / -1; display: grid; gap: 4px; padding: 14px; border: 1.5px dashed var(--line); border-radius: 9px; color: var(--muted); font-size: .86rem; }
+.pend-vazio b { color: var(--fg); }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <div class="eyebrow">UniFil · Ciência da Computação e Engenharia de Software</div>
+      <h1>Monte sua <span>grade</span></h1>
+      <p class="sub">Escolha o bimestre, importe suas pendências e clique no <b>+</b> de um horário para escolher a disciplina. Tudo fica salvo neste navegador; use <b>Salvar grade</b> para guardar um arquivo.</p>
+    </div>
+    <div class="toolbar">
+      <div class="tgroup" aria-label="Exportar">
+        <button class="btn primary" id="btnPdf" type="button">Salvar PDF</button>
+        <button class="btn primary" id="btnXlsx" type="button">Exportar Excel</button>
+      </div>
+      <div class="tgroup" aria-label="Arquivo da grade">
+        <button class="btn" id="btnSaveFile" type="button">Salvar grade</button>
+        <button class="btn" id="btnLoad" type="button">Carregar grade</button>
+        <input type="file" id="fileIn" accept=".json,.xlsx,application/json" hidden>
+      </div>
+      <div class="tgroup">
+        <button class="btn" id="btnCopy" type="button">Copiar texto</button>
+        <button class="btn danger" id="btnClear" type="button">Limpar grade</button>
+      </div>
+    </div>
+  </header>
+
+  <section class="bim" aria-labelledby="bimTitulo">
+    <div class="bim-head">
+      <div>
+        <h2 id="bimTitulo">Qual grade você quer montar?</h2>
+        <p class="note" id="bimStatus">Carregando a lista de bimestres…</p>
+      </div>
+      <div class="bim-extra">
+        <button class="btn small" id="btnOfertaArq" type="button">Abrir planilha de ofertas (.xlsx)</button>
+        <input type="file" id="ofertaIn" accept=".xlsx" hidden>
+      </div>
+    </div>
+    <div class="bim-opcoes" id="bimOpcoes" role="radiogroup" aria-label="Bimestre"></div>
+  </section>
+
+  <section class="ident" aria-label="Identificação do aluno">
+    <div class="field grow">
+      <label for="alunoNome">Nome do aluno</label>
+      <input type="text" id="alunoNome" maxlength="80" placeholder="Nome completo" autocomplete="name">
+    </div>
+    <div class="field">
+      <label for="alunoMat">Matrícula</label>
+      <input type="text" id="alunoMat" maxlength="20" placeholder="ex.: 000000000" inputmode="numeric" autocomplete="off">
+    </div>
+    <div class="field">
+      <label for="alunoTurma">Turma</label>
+      <input type="text" id="alunoTurma" maxlength="30" placeholder="ex.: E1/2023 ES" list="turmasList" autocomplete="off">
+      <datalist id="turmasList"></datalist>
+    </div>
+    <p class="note ident-note">Ficam salvos só neste navegador e aparecem no PDF, no Excel e no nome dos arquivos exportados.</p>
+  </section>
+
+  <section class="filters" aria-label="Filtros das ofertas">
+    <div class="field">
+      <label>Curso</label>
+      <div class="seg" id="segCurso" role="group" aria-label="Curso">
+        <button type="button" data-v="" aria-pressed="true">Todos</button>
+        <button type="button" data-v="CC" aria-pressed="false">Ciência da Computação</button>
+        <button type="button" data-v="ES" aria-pressed="false">Eng. de Software</button>
+      </div>
+    </div>
+    <div class="field">
+      <label for="selTurma">Turma</label>
+      <select id="selTurma"><option value="">Todas as turmas</option></select>
+    </div>
+    <div class="field">
+      <label for="selCode">Código da disciplina</label>
+      <select id="selCode"><option value="">Todos os códigos</option></select>
+    </div>
+    <div class="field" style="flex:1;min-width:180px">
+      <label for="q">Buscar disciplina, código ou professor</label>
+      <input type="search" id="q" placeholder="ex.: Banco de Dados, ALLP230008, Robson">
+    </div>
+    <label class="check prio-toggle"><input type="checkbox" id="onlyPend"> Só pendentes</label>
+  </section>
+
+  <section class="box pend-box" aria-labelledby="pendTitle">
+    <div class="head">
+      <div><h2 id="pendTitle">Pendências</h2><p class="note" style="margin:2px 0 0">Importe um Excel com a coluna <b>Código</b> (ex.: INAR230002). As ofertadas viram prioridade; clique em uma para ver só ela na grade.</p></div>
+      <div class="stats" id="pendStats"></div>
+    </div>
+    <div class="pend-acoes">
+      <button class="btn primary" id="btnPendImport" type="button">Importar pendências (.xlsx)</button>
+      <button class="btn" id="btnPendModelo" type="button">Baixar modelo</button>
+      <button class="btn danger" id="btnPendLimpar" type="button" hidden>Remover pendências</button>
+      <input type="file" id="pendIn" accept=".xlsx,.xls,.csv" hidden>
+    </div>
+    <div class="pend-list" id="pendList"></div>
+  </section>
+
+  <div class="sheet">
+    <div class="week" id="grade"></div>
+  </div>
+
+  <div class="lower">
+    <section class="box">
+      <div class="head"><h2>Resumo da grade</h2><div class="stats" id="stats"></div></div>
+      <div class="tbl-wrap"><table class="summary" id="summary"></table></div>
+      <textarea class="copy" id="copyArea" hidden readonly aria-label="Grade em texto"></textarea>
+    </section>
+    <section class="box">
+      <div class="head"><h2>Atividades digitais</h2><span class="note">Sem dia e horário fixos</span></div>
+      <div class="dig" id="dig"></div>
+    </section>
+  </div>
+</div>
+
+<div class="scrim" id="scrim" hidden></div>
+<aside class="panel" id="panel" hidden aria-label="Escolher disciplina">
+  <div class="panel-head">
+    <div class="row">
+      <div><div class="eyebrow" id="pWhen"></div><h2 id="pTitle">Disciplinas ofertadas</h2></div>
+      <button class="btn small" id="pClose" type="button">Fechar</button>
+    </div>
+    <label class="check"><input type="checkbox" id="alsoFill" checked> Preencher também os outros horários da mesma disciplina e turma</label>
+  </div>
+  <div class="panel-list" id="pList"></div>
+</aside>
+<div class="toast" id="toast" hidden></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script>
+// core/util.js — utilitários de DOM e texto (sem regra de negócio)
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const norm = s => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+const slotKey = (d, h) => d + '|' + h;
+const cursoOf = t => /CC\/ES$/.test(t) ? 'CC/ES' : t.slice(-2);
+const chip = t => { const c = cursoOf(t); return `<span class="chip ${c === 'CC' ? 'cc' : c === 'ES' ? 'es' : ''}">${esc(t)}</span>`; };
+// core/dominio.js — regras do domínio: ofertas, pendências, turmas e carga horária
+// Os dados chegam em tempo de execução: definirOfertas() (planilha do bimestre) e definirPendencias() (planilha importada)
+const DIAS = ['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
+const DIAS_CURTO = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+const HORAS = ['19:00 - 20:30', '20:45 - 22:15'];
+let OFERTAS = [], BY_ID = {}, DIGITAIS = [], CH_MAP = {}, NOMES = {};
+function definirOfertas(aulas, digitais, ch) {
+  OFERTAS = aulas.filter(a => a.c !== 'FLEX');
+  BY_ID = Object.fromEntries(OFERTAS.map(a => [a.id, a]));
+  DIGITAIS = digitais; CH_MAP = ch; NOMES = {};
+  for (const a of [...OFERTAS, ...DIGITAIS]) NOMES[a.c] ||= a.n;
+}
+let PENDENTES = [], PEND = new Map();
+function definirPendencias(lista) { PENDENTES = lista; PEND = new Map(lista.map(p => [p.c, p])); }
+const nomeDe = c => PEND.get(c)?.n || NOMES[c] || '';
+const isPrio = c => PEND.has(c);
+const PRIO = '<span class="chip prio">PRIORIDADE · pendente</span>';
+
+function matches(a) {
+  if (filt.code && a.c !== filt.code) return false;
+  if (filt.onlyPend && !isPrio(a.c)) return false;
+  if (filt.curso && !a.t.some(t => cursoOf(t).includes(filt.curso))) return false;
+  if (filt.turma && !a.t.includes(filt.turma)) return false;
+  if (filt.q) {
+    const q = norm(filt.q);
+    if (!norm(a.n + ' ' + a.c + ' ' + a.p).includes(q)) return false;
+  }
+  return true;
+}
+const offersAt = (d, h) => OFERTAS.filter(a => a.d === d && a.h === h);
+// other meetings of the same class: same code, sharing a turma (or both without turma and same professor)
+function siblings(a) {
+  return OFERTAS.filter(b => b !== a && b.c === a.c &&
+    (a.t.length ? b.t.some(t => a.t.includes(t)) : b.p === a.p));
+}
+const whenTxt = a => `${DIAS_CURTO[a.d]} ${HORAS[a.h].slice(0, 5)}`;
+
+// carga horária: cada horário da grade (1º ou 2º) vale 15h -> 15h = 1 horário, 30h = 2 horários
+const SLOT_H = 15;
+function chInfo(c) {
+  const known = CH_MAP[c] || PEND.get(c)?.ch;
+  if (known) return { h: known, est: false };
+  // sem C.H. na oferta nem na planilha de pendências: estima pelo nº de encontros semanais da turma
+  const a = OFERTAS.find(o => o.c === c);
+  const n = a ? 1 + new Set(siblings(a).map(b => slotKey(b.d, b.h))).size : 1;
+  return { h: n * SLOT_H, est: true };
+}
+const slotsNeeded = c => Math.max(1, Math.round(chInfo(c).h / SLOT_H));
+const slotsUsed = c => Object.values(state.sel).filter(id => BY_ID[id]?.c === c).length;
+// C.H. completa: a disciplina já tem todos os horários de que precisa
+const chCompleta = c => slotsUsed(c) >= slotsNeeded(c);
+// pode aparecer como opção no horário k? some quando a C.H. já foi completada em outros horários
+const disponivelEm = (a, k) => !chCompleta(a.c) || BY_ID[state.sel[k]]?.c === a.c;
+const chLabel = c => { const i = chInfo(c); return `${i.h}h${i.est ? ' (estimada)' : ''}`; };
+// core/estado.js — grade escolhida (uma por bimestre), dados do aluno e persistência no navegador
+const CHAVE_GRADE = b => `montador-grade:${b}`;
+const CHAVE_ALUNO = 'montador-grade:aluno';
+const CHAVE_BIMESTRE = 'montador-grade:bimestre';
+const CHAVE_LEGADA = 'grade-2026-v2';   // versão anterior (uma grade só, do B4-2026)
+const ALUNO_VAZIO = () => ({ nome: '', mat: '', turma: '' });
+
+const lerJSON = k => { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch (e) { return null; } };
+const gravarJSON = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+
+let BIM = '';   // bimestre aberto, ex.: B4-2026
+let state = { sel: {}, dig: [], aluno: { ...ALUNO_VAZIO(), ...(lerJSON(CHAVE_ALUNO) || lerJSON(CHAVE_LEGADA)?.aluno || {}) } };
+
+// abre a grade salva do bimestre (descarta escolhas que não existem na oferta carregada)
+function carregarGradeSalva(b) {
+  let s = lerJSON(CHAVE_GRADE(b));
+  if (!s && b === 'B4-2026') s = lerJSON(CHAVE_LEGADA);
+  state.sel = {}; state.dig = [];
+  for (const [k, id] of Object.entries(s?.sel || {})) if (BY_ID[id]) state.sel[k] = id;
+  state.dig = (s?.dig || []).filter(id => DIGITAIS.some(x => x.id === id));
+}
+const save = () => {
+  if (BIM) gravarJSON(CHAVE_GRADE(BIM), { sel: state.sel, dig: state.dig });
+  gravarJSON(CHAVE_ALUNO, state.aluno);
+};
+
+// nome da grade = bimestre; identificação do aluno: usados no PDF, no Excel, no texto copiado e no nome dos arquivos
+const gradeNome = () => BIM || 'grade';
+const aluno = () => ({ nome: state.aluno.nome.trim(), mat: state.aluno.mat.trim(), turma: state.aluno.turma.trim() });
+const alunoLinha = () => { const a = aluno(); return [a.nome && `Aluno: ${a.nome}`, a.mat && `Matrícula: ${a.mat}`, a.turma && `Turma: ${a.turma}`].filter(Boolean).join(' · '); };
+const slug = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^\w.-]+/g, '-').replace(/^-+|-+$/g, '');
+// ex.: Fulano-de-Tal_000000000_E1-2023-ES_B4-2026
+const arquivoNome = () => { const a = aluno(); return [a.nome, a.mat, a.turma, gradeNome()].filter(Boolean).map(slug).filter(Boolean).join('_') || 'grade'; };
+// io/ofertas.js — lê as ofertas de um bimestre (jobs/ofertas/<bimestre>.xlsx) e o índice de bimestres
+// Formato da planilha (gerada por scripts/build-dados.sh):
+//   aba "Aulas":    Código | Disciplina | Dia | Horário | Turma | Curso | Sala | Professor | Tipo | C.H.
+//   aba "Digitais": Código | Disciplina | Turma | Curso | Professor | C.H.
+const OFERTAS_URL = 'jobs/ofertas/';
+
+async function lerIndiceOfertas() {
+  const r = await fetch(OFERTAS_URL + 'index.json', { cache: 'no-cache' });
+  if (!r.ok) throw new Error('índice de ofertas não encontrado');
+  return r.json();
+}
+
+async function baixarOfertas(bim) {
+  const r = await fetch(OFERTAS_URL + encodeURIComponent(bim) + '.xlsx', { cache: 'no-cache' });
+  if (!r.ok) throw new Error(`não há oferta publicada para ${bim}`);
+  return lerPlanilhaOfertas(await r.arrayBuffer());
+}
+
+// linhas de uma aba como objetos, usando a 1ª linha como cabeçalho (sem acento e minúsculo)
+function linhasDaAba(ws) {
+  const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', raw: false });
+  const cab = (rows.shift() || []).map(h => norm(String(h)).trim());
+  return rows.filter(r => r.some(v => String(v).trim())).map(r => Object.fromEntries(cab.map((h, i) => [h, String(r[i] ?? '').trim()])));
+}
+const acharAba = (wb, re) => wb.Sheets[wb.SheetNames.find(n => re.test(norm(n)))];
+
+function lerPlanilhaOfertas(buf) {
+  const wb = XLSX.read(buf, { type: 'array' });
+  const wsA = acharAba(wb, /^aulas/), wsD = acharAba(wb, /^(atividades )?digita/);
+  if (!wsA) throw new Error('a planilha não tem a aba "Aulas"');
+  const ch = {};
+  const turmaDe = r => r.turma ? `${r.turma} ${r.curso}`.trim() : '';
+  // uma oferta = mesma disciplina, dia, horário, sala e professor (várias turmas podem dividir a aula)
+  const grupos = new Map();
+  for (const r of linhasDaAba(wsA)) {
+    const c = r['codigo'], d = DIAS.indexOf(r['dia']), h = HORAS.indexOf(r['horario']);
+    if (!c || d < 0 || h < 0) continue;
+    if (+r['c.h.']) ch[c] = +r['c.h.'];
+    const id = [d, h, c, r.sala, r.professor].join('|');
+    if (!grupos.has(id)) grupos.set(id, { id, c, n: r.disciplina, d, h, s: r.sala, p: r.professor, tp: r.tipo, t: [] });
+    const t = turmaDe(r); if (t && !grupos.get(id).t.includes(t)) grupos.get(id).t.push(t);
+  }
+  const dig = new Map();
+  for (const r of wsD ? linhasDaAba(wsD) : []) {
+    const c = r['codigo']; if (!c) continue;
+    if (+r['c.h.']) ch[c] = +r['c.h.'];
+    const id = `${c}|${r.professor}`;
+    if (!dig.has(id)) dig.set(id, { id, c, n: r.disciplina, p: r.professor, t: [] });
+    const t = turmaDe(r); if (t && !dig.get(id).t.includes(t)) dig.get(id).t.push(t);
+  }
+  const aulas = [...grupos.values()].map(a => ({ ...a, t: a.t.sort() }));
+  if (!aulas.length) throw new Error('nenhuma aula encontrada na aba "Aulas"');
+  return { aulas, digitais: [...dig.values()], ch };
+}
+// io/pendencias.js — importa as disciplinas pendentes de uma planilha Excel do usuário
+// Padrão de importação: uma coluna "Código" (ou "Código da disciplina") com os códigos, ex.: INAR230002.
+// Opcionais: "Disciplina" (nome), "C.H." (carga horária) e "STATUS" (se existir, só entram as linhas PENDENTE).
+const CHAVE_PEND = 'montador-grade:pendencias';
+const RE_CODIGO = /^[A-Z]{3,4}\d{6}$/;
+
+function lerPendenciasSalvas() { const p = lerJSON(CHAVE_PEND); return Array.isArray(p) ? p : []; }
+function salvarPendencias(lista) { definirPendencias(lista); gravarJSON(CHAVE_PEND, lista); }
+
+function lerPlanilhaPendencias(buf) {
+  const wb = XLSX.read(buf, { type: 'array' });
+  for (const nomeAba of wb.SheetNames) {
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets[nomeAba], { header: 1, defval: '', raw: false });
+    // o cabeçalho pode não estar na 1ª linha: procura nas 10 primeiras
+    for (let i = 0; i < Math.min(rows.length, 10); i++) {
+      const cab = rows[i].map(h => norm(String(h)).trim());
+      const iCod = cab.findIndex(h => /^codigo( da (disciplina|uc))?$/.test(h));
+      if (iCod < 0) continue;
+      const iNome = cab.findIndex(h => /^(disciplina|unidade curricular|nome)/.test(h));
+      const iCh = cab.findIndex(h => /^c\.?h\.?( \(horas\))?$/.test(h));
+      const iSt = cab.findIndex(h => h === 'status' || h === 'situacao');
+      const vistos = new Set(), lista = [];
+      for (const r of rows.slice(i + 1)) {
+        const c = String(r[iCod] || '').trim().toUpperCase();
+        if (!RE_CODIGO.test(c) || vistos.has(c)) continue;
+        if (iSt >= 0 && !/pendente/i.test(r[iSt])) continue;   // com coluna STATUS, só as pendentes
+        vistos.add(c);
+        lista.push({ c, n: iNome >= 0 ? String(r[iNome]).replace(/\s*@\s*$/, '').trim() : '', ch: iCh >= 0 ? (+r[iCh] || 0) : 0 });
+      }
+      if (lista.length) return { lista, aba: nomeAba };
+    }
+  }
+  throw new Error('não achei uma coluna "Código" com códigos de disciplina (ex.: INAR230002)');
+}
+
+// planilha modelo para o usuário preencher
+function planilhaModeloPendencias() {
+  const ws = XLSX.utils.aoa_to_sheet([['Código', 'Disciplina (opcional)', 'C.H. (opcional)'], ['INAR230002', 'Inteligência Artificial: Algoritmos evolutivos', 30], ['ESDS230001', 'Estatística: Estatística Descritiva', 15]]);
+  ws['!cols'] = [{ wch: 14 }, { wch: 60 }, { wch: 16 }];
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Pendências');
+  return new Blob([XLSX.write(wb, { bookType: 'xlsx', type: 'array' })]);
+}
+// ui/filtros.js — filtros de curso, turma, código e busca; renderAll() redesenha a tela
+const filt = { curso: '', turma: '', q: '', code: '', onlyPend: false };
+
+// ---------- filters ----------
+let turmas = [];
+const ordemTurma = (x, y) => {
+  const [ex, yx] = [x.match(/E(\d+)\/(\d{4})/), y.match(/E(\d+)\/(\d{4})/)];
+  if (ex && yx) return (yx[2] - ex[2]) || (ex[1] - yx[1]) || x.localeCompare(y);
+  return ex ? -1 : yx ? 1 : x.localeCompare(y);
+};
+$('segCurso').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  filt.curso = b.dataset.v;
+  for (const x of $('segCurso').children) x.setAttribute('aria-pressed', x === b);
+  renderAll();
+});
+$('selTurma').addEventListener('change', e => { filt.turma = e.target.value; renderAll(); });
+$('q').addEventListener('input', e => { filt.q = e.target.value.trim(); renderAll(); });
+
+// opções que dependem da oferta carregada e das pendências: turmas e códigos (pendentes ofertadas primeiro)
+function montarFiltros() {
+  turmas = [...new Set(OFERTAS.flatMap(a => a.t))].sort(ordemTurma);
+  if (filt.turma && !turmas.includes(filt.turma)) filt.turma = '';
+  $('selTurma').innerHTML = '<option value="">Todas as turmas</option>' + turmas.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join('');
+  $('selTurma').value = filt.turma;
+  $('turmasList').innerHTML = turmas.map(t => `<option value="${esc(t)}"></option>`).join('');
+  const presCodes = new Set(OFERTAS.map(a => a.c));
+  if (filt.code && !presCodes.has(filt.code)) filt.code = '';
+  const opt = c => `<option value="${esc(c)}">${isPrio(c) ? '★ ' : ''}${esc(c)} · ${esc(NOMES[c])}</option>`;
+  const pendPres = [...presCodes].filter(isPrio).sort();
+  $('selCode').innerHTML = '<option value="">Todos os códigos</option>' +
+    (pendPres.length ? `<optgroup label="Pendentes ofertadas">${pendPres.map(opt).join('')}</optgroup>` : '') +
+    `<optgroup label="Todas as disciplinas presenciais">${[...presCodes].sort().map(opt).join('')}</optgroup>`;
+  $('selCode').value = filt.code;
+}
+function setCode(c) { filt.code = c; $('selCode').value = c; renderAll(); }
+$('selCode').addEventListener('change', e => setCode(e.target.value));
+$('onlyPend').addEventListener('change', e => { filt.onlyPend = e.target.checked; renderAll(); });
+function renderAll() { renderGrid(); renderPend(); if (!$('panel').hidden) renderPanel(); }
+// ui/pendencias.js — quadro "Pendências": importar planilha, situação de cada pendência no bimestre aberto
+function renderPend() {
+  $('btnPendLimpar').hidden = !PENDENTES.length;
+  if (!PENDENTES.length) {
+    $('pendStats').innerHTML = '';
+    $('pendList').innerHTML = `<div class="pend-vazio"><b>Nenhuma pendência importada.</b>
+      <span>Importe um Excel com a coluna <b>Código</b>, uma disciplina por linha. Use “Baixar modelo” para ver o formato. Também serve a planilha de pendências do portal: se ela tiver a coluna STATUS, entram só as linhas PENDENTE.</span></div>`;
+    return;
+  }
+  const chosen = new Set(Object.values(state.sel).map(id => BY_ID[id]?.c));
+  DIGITAIS.forEach(x => { if (state.dig.includes(x.id)) chosen.add(x.c); });
+  let nOf = 0, nIn = 0;
+  const items = PENDENTES.map(p => {
+    const pres = OFERTAS.filter(a => a.c === p.c), dig = DIGITAIS.filter(x => x.c === p.c);
+    const offered = pres.length || dig.length; if (offered) nOf++;
+    const inGrade = chosen.has(p.c); if (inGrade) nIn++;
+    let st;
+    if (pres.length) st = 'Presencial: ' + [...new Set(pres.map(whenTxt))].join(', ');
+    else if (dig.length) st = 'Atividade digital (marque na lista abaixo)';
+    else st = `Não ofertada em ${gradeNome()}`;
+    let hint = '';
+    if (pres.length) {
+      const need = slotsNeeded(p.c), used = slotsUsed(p.c);
+      hint = `<div class="st">${chLabel(p.c)} = ${need} ${need === 1 ? 'horário' : 'horários'} na semana · na grade: <b class="${used > need ? 'over' : used === need ? 'ok' : ''}">${used} de ${need}</b>${used > need ? ' (sobrando)' : ''}</div>`;
+    }
+    const inner = `<div class="top"><span class="code">${esc(p.c)}</span><span class="ch">${offered || p.ch ? chLabel(p.c) : ''}</span>${inGrade ? '<span class="done">✓ na grade</span>' : ''}</div>
+      <div class="nm">${esc(nomeDe(p.c) || 'Disciplina sem nome na planilha')}</div><div class="st">${st}</div>${hint}`;
+    return pres.length
+      ? `<button type="button" class="pitem${filt.code === p.c ? ' active' : ''}" data-code="${esc(p.c)}" title="Mostrar só ${esc(p.c)} na grade">${inner}</button>`
+      : `<div class="pitem${offered ? '' : ' off'}">${inner}</div>`;
+  });
+  $('pendList').innerHTML = items.join('');
+  $('pendStats').innerHTML = `<div class="stat"><b>${PENDENTES.length}</b><span>pendentes</span></div><div class="stat"><b>${nOf}</b><span>ofertadas</span></div><div class="stat"><b>${nIn}</b><span>na grade</span></div>`;
+}
+$('pendList').addEventListener('click', e => {
+  const b = e.target.closest('[data-code]'); if (!b) return;
+  setCode(filt.code === b.dataset.code ? '' : b.dataset.code);
+  document.querySelector('.sheet').scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
+
+function aplicarPendencias(lista) { salvarPendencias(lista); montarFiltros(); renderAll(); renderDig(); }
+$('btnPendImport').onclick = () => $('pendIn').click();
+$('pendIn').addEventListener('change', async e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  try {
+    const { lista } = lerPlanilhaPendencias(await f.arrayBuffer());
+    aplicarPendencias(lista);
+    const of = lista.filter(p => OFERTAS.some(a => a.c === p.c) || DIGITAIS.some(x => x.c === p.c)).length;
+    toast(`${lista.length} pendências importadas · ${of} ofertadas em ${gradeNome()}`);
+  } catch (err) { toast('Não consegui importar: ' + err.message); }
+});
+$('btnPendModelo').onclick = () => offerFile('modelo-pendencias.xlsx', planilhaModeloPendencias(), 'Modelo salvo. Preencha a coluna Código e importe.');
+let pendArmed = null;
+$('btnPendLimpar').onclick = () => {
+  const b = $('btnPendLimpar');
+  if (!pendArmed) { b.textContent = 'Clique de novo para remover'; pendArmed = setTimeout(() => { b.textContent = 'Remover pendências'; pendArmed = null; }, 3000); return; }
+  clearTimeout(pendArmed); pendArmed = null; b.textContent = 'Remover pendências';
+  aplicarPendencias([]); toast('Pendências removidas');
+};
+// ui/grade.js — grade semanal (segunda a sábado × 2 horários)
+// ---------- grid ----------
+function renderGrid() {
+  let html = '<div class="dh corner" style="grid-row:1;grid-column:1"></div>' +
+    DIAS.map((d, i) => `<div class="dh" style="grid-row:1;grid-column:${i + 2}">${d}</div>`).join('');
+  HORAS.forEach((hr, h) => {
+    const row = h === 0 ? 2 : 4;
+    const [a1, a2] = hr.split(' - ');
+    html += `<div class="tl" style="grid-row:${row}">${a1}<i>às</i>${a2}</div>`;
+    for (let d = 0; d < 6; d++) {
+      const k = slotKey(d, h), a = BY_ID[state.sel[k]];
+      html += `<div class="cell h${h}" style="grid-row:${row};grid-column:${d + 2};order:${d * 2 + h}"><div class="mlabel"><b>${DIAS[d]}</b><span>${hr.replace(' - ', ' – ')}</span></div>`;
+      if (a) {
+        const need = slotsNeeded(a.c), used = slotsUsed(a.c);
+        const order = Object.keys(state.sel).filter(x => BY_ID[state.sel[x]]?.c === a.c).sort().indexOf(k) + 1;
+        html += `<div class="card${isPrio(a.c) ? ' is-prio' : ''}${used > need ? ' over' : ''}">
+          ${isPrio(a.c) ? PRIO : ''}<div class="nm">${esc(a.n)}</div>
+          <span class="code">${esc(a.c)}</span>
+          <span class="chpill" title="Cada horário vale ${SLOT_H}h">${chLabel(a.c)} · ${SLOT_H}h aqui (${order}/${need})</span>
+          ${used > need ? `<span class="warnline">Excede a C.H.: ${used} horários para ${need}</span>` : ''}
+          <div class="meta">${esc(a.p || 'Professor a definir')}</div>
+          <div class="room">${a.s ? 'Sala ' + esc(a.s) : 'Sem sala'}</div>
+          <div class="tur">${a.t.map(esc).join(' · ')}</div>
+          <div class="acts"><button type="button" class="btn small" data-open="${k}">Trocar</button><button type="button" class="btn small danger" data-rm="${k}">Remover</button></div>
+        </div>`;
+      } else {
+        const all = offersAt(d, h), fl = all.filter(a => matches(a) && disponivelEm(a, k)), n = fl.length, np = fl.filter(a => isPrio(a.c)).length;
+        if (!all.length) html += '<div class="none">Sem oferta</div>';
+        else html += `<button type="button" class="add${np ? ' has-prio' : ''}" data-open="${k}" aria-label="Escolher disciplina: ${DIAS[d]} ${hr}"><b>+</b><span>${n} ${n === 1 ? 'oferta' : 'ofertas'}${n !== all.length ? ` <small>(de ${all.length})</small>` : ''}</span>${np ? `<span class="pcount">${np} ${np === 1 ? 'pendente' : 'pendentes'}</span>` : ''}</button>`;
+      }
+      html += '</div>';
+    }
+    if (h === 0) html += '<div class="band" style="grid-row:3">INTERVALO · 20:30 – 20:45</div>';
+  });
+  $('grade').innerHTML = html;
+  renderSummary();
+}
+$('grade').addEventListener('click', e => {
+  const o = e.target.closest('[data-open]'), r = e.target.closest('[data-rm]');
+  if (o) openPanel(o.dataset.open);
+  if (r) { const a = BY_ID[state.sel[r.dataset.rm]]; delete state.sel[r.dataset.rm]; save(); renderAll(); toast(`${a.c} removida de ${whenTxt(a)}`); }
+});
+// ui/seletor.js — janela de escolha da disciplina de um horário; completa até a C.H.
+// ---------- picker ----------
+let cur = null;
+function openPanel(k) { cur = k; $('panel').hidden = false; $('scrim').hidden = false; renderPanel(); $('pClose').focus(); }
+function closePanel() { $('panel').hidden = true; $('scrim').hidden = true; cur = null; }
+$('pClose').onclick = closePanel; $('scrim').onclick = closePanel;
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('panel').hidden) closePanel(); });
+
+function renderPanel() {
+  const [d, h] = cur.split('|').map(Number);
+  $('pWhen').textContent = `${DIAS[d]} · ${HORAS[h]}`;
+  const all = offersAt(d, h), done = all.filter(a => !disponivelEm(a, cur)), list = all.filter(a => matches(a) && disponivelEm(a, cur)).sort((x, y) => isPrio(y.c) - isPrio(x.c));
+  const chosenCodes = new Set(Object.values(state.sel).map(id => BY_ID[id]?.c));
+  $('pTitle').textContent = `${list.length} ${list.length === 1 ? 'disciplina ofertada' : 'disciplinas ofertadas'}`;
+  let html = '';
+  if (state.sel[cur]) html += `<button type="button" class="btn small danger" data-pick="" style="justify-self:start">Deixar este horário vazio</button>`;
+  html += list.map(a => {
+    const sib = siblings(a), need = slotsNeeded(a.c), used = slotsUsed(a.c);
+    return `<button type="button" class="opt${isPrio(a.c) ? ' is-prio' : ''}${state.sel[cur] === a.id ? ' current' : ''}" data-pick="${esc(a.id)}">
+      <div class="top"><span class="nm">${esc(a.n)}</span><span class="code">${esc(a.c)}</span></div>
+      <div class="meta"><b>C.H. ${chLabel(a.c)}</b> = ${need} ${need === 1 ? 'horário' : 'horários'} na semana${used ? ` · você já tem ${used} de ${need}` : ''}</div>
+      <div class="meta">${esc(a.p || 'Professor a definir')} · ${a.s ? 'Sala ' + esc(a.s) : 'sem sala'}${a.tp && a.tp !== 'CORE' ? ' · ' + esc(a.tp) : ''}</div>
+      <div class="chips">${isPrio(a.c) ? PRIO : ''}${a.t.map(chip).join('')}${chosenCodes.has(a.c) && state.sel[cur] !== a.id ? '<span class="chip in">já está na sua grade</span>' : ''}</div>
+      ${sib.length ? `<div class="also">Também em: ${sib.map(b => `${whenTxt(b)}${b.s ? ' (sala ' + esc(b.s) + ')' : ''}`).join(', ')}</div>` : ''}
+    </button>`;
+  }).join('');
+  if (!list.length) html += `<p class="empty-list">${all.length ? 'Nenhuma oferta neste horário com os filtros atuais. Ajuste curso, turma, código ou busca.' : 'Não há disciplinas ofertadas neste horário.'}</p>`;
+  if (done.length) html += `<p class="note">${done.length} ${done.length === 1 ? 'disciplina oculta' : 'disciplinas ocultas'} porque a carga horária já está completa na sua grade: ${[...new Set(done.map(a => a.c))].map(esc).join(', ')}.</p>`;
+  const filtradas = all.length - list.length - done.length;
+  if (list.length && filtradas > 0) html += `<p class="note">${filtradas} outras ofertas escondidas pelos filtros.</p>`;
+  $('pList').innerHTML = html;
+}
+$('pList').addEventListener('click', e => {
+  const b = e.target.closest('[data-pick]'); if (!b) return;
+  const id = b.dataset.pick;
+  if (!id) { delete state.sel[cur]; save(); renderAll(); closePanel(); return; }
+  const a = BY_ID[id], need = slotsNeeded(a.c);
+  state.sel[cur] = id;
+  const added = [], blocked = [];
+  // completa só até a carga horária: 15h = 1 horário, 30h = 2 horários
+  if ($('alsoFill').checked) {
+    for (const s of siblings(a)) {
+      if (slotsUsed(a.c) >= need) break;
+      const k = slotKey(s.d, s.h);
+      if (state.sel[k] === s.id) continue;
+      if (!state.sel[k]) { state.sel[k] = s.id; added.push(whenTxt(s)); }
+      else if (BY_ID[state.sel[k]].c !== a.c) blocked.push(whenTxt(s));
+    }
+  }
+  const used = slotsUsed(a.c);
+  save(); renderAll(); closePanel();
+  let msg = `${a.c} (${chLabel(a.c)}) adicionada`;
+  if (added.length) msg += ` + ${added.join(', ')}`;
+  if (used < need && blocked.length) msg += ` · falta ${need - used} horário: ${blocked.join(', ')} já ocupado`;
+  if (used > need) msg += ` · atenção: ${used} horários para ${need} da C.H.`;
+  toast(msg);
+});
+
+// ui/resumo.js — resumo da grade e totais de carga horária
+// ---------- summary ----------
+function renderSummary() {
+  const groups = {};
+  for (const [k, id] of Object.entries(state.sel)) {
+    const a = BY_ID[id]; if (!a) continue;
+    (groups[a.c] ||= { a, slots: [], salas: new Set(), turmas: new Set() });
+    groups[a.c].slots.push(a); if (a.s) groups[a.c].salas.add(a.s); a.t.forEach(t => groups[a.c].turmas.add(t));
+  }
+  const rows = Object.values(groups).sort((x, y) => x.a.n.localeCompare(y.a.n));
+  const nAulas = Object.keys(state.sel).length;
+  const hPres = rows.reduce((s, g) => s + chInfo(g.a.c).h, 0);
+  const digs = DIGITAIS.filter(x => state.dig.includes(x.id)).sort((x, y) => x.n.localeCompare(y.n));
+  const hDig = digs.reduce((s, x) => s + chInfo(x.c).h, 0);
+  $('stats').innerHTML = `<div class="stat"><b>${rows.length + digs.length}</b><span>disciplinas</span></div><div class="stat"><b>${nAulas}</b><span>horários/semana</span></div><div class="stat"><b>${hPres + hDig}h</b><span>carga horária</span></div><div class="stat"><b>${digs.length}</b><span>digitais</span></div>`;
+  if (!rows.length && !digs.length) { $('summary').innerHTML = '<tr><td class="note">Nenhuma disciplina escolhida ainda. Clique em um horário vazio na grade ou marque uma atividade digital.</td></tr>'; return; }
+  const cab = '<thead><tr><th>Código</th><th>Disciplina</th><th>C.H.</th><th>Horários</th><th>Sala</th><th>Turma</th></tr></thead><tbody>';
+  const pres = rows.map(g => { const need = slotsNeeded(g.a.c), used = g.slots.length;
+      return `<tr><td><span class="code">${esc(g.a.c)}</span></td><td>${isPrio(g.a.c) ? PRIO + '<br>' : ''}${esc(g.a.n)}<div class="note">${esc(g.a.p)}</div></td>
+      <td class="n">${chLabel(g.a.c)}<div class="note ${used > need ? 'over' : used < need ? 'short' : 'ok'}">${used}/${need} horários</div></td>
+      <td>${g.slots.sort((x, y) => x.d - y.d || x.h - y.h).map(whenTxt).join('<br>')}</td>
+      <td>${[...g.salas].map(esc).join(', ') || '—'}</td><td>${[...g.turmas].map(chip).join(' ')}</td></tr>`; }).join('');
+  const dig = digs.length ? `<tr class="sep"><td colspan="6">Atividades digitais · ${hDig}h</td></tr>` + digs.map(x => `<tr class="digrow">
+      <td><span class="code">${esc(x.c)}</span></td><td>${isPrio(x.c) ? PRIO + '<br>' : ''}${esc(x.n)}<div class="note">${esc(x.p)}</div></td>
+      <td class="n">${chLabel(x.c)}</td><td><span class="chip dg">Digital</span><div class="note">sem horário fixo</div></td>
+      <td>Online</td><td>${x.t.map(chip).join(' ')}</td></tr>`).join('') : '';
+  const sepPres = rows.length && digs.length ? `<tr class="sep"><td colspan="6">Presenciais · ${hPres}h</td></tr>` : '';
+  $('summary').innerHTML = cab + sepPres + pres + dig + '</tbody>';
+}
+
+// ui/digitais.js — lista de atividades digitais
+// ---------- digital ----------
+function renderDig() {
+  $('dig').innerHTML = [...DIGITAIS].sort((x, y) => isPrio(y.c) - isPrio(x.c)).map(x => `<label class="${isPrio(x.c) ? 'is-prio' : ''}"><input type="checkbox" data-id="${esc(x.id)}" ${state.dig.includes(x.id) ? 'checked' : ''}>
+    <span class="nm">${isPrio(x.c) ? PRIO + ' ' : ''}${esc(x.n)}</span><span class="meta"><span class="code">${esc(x.c)}</span> · ${chLabel(x.c)} · ${esc(x.p)}</span>
+    <span class="meta chips">${x.t.map(chip).join('')}</span></label>`).join('');
+}
+$('dig').addEventListener('change', e => {
+  const id = e.target.dataset.id; if (!id) return;
+  state.dig = e.target.checked ? [...new Set([...state.dig, id])] : state.dig.filter(x => x !== id);
+  save(); renderSummary(); renderPend();
+});
+
+// ui/acoes.js — copiar texto, limpar grade e avisos (toast)
+// ---------- copy / clear ----------
+function asText() {
+  const lines = [`GRADE ${gradeNome().toUpperCase()}`, ...(alunoLinha() ? [alunoLinha()] : []), ''];
+  DIAS.forEach((dn, d) => HORAS.forEach((hr, h) => {
+    const a = BY_ID[state.sel[slotKey(d, h)]];
+    if (a) lines.push(`${dn} ${hr} | ${a.c} | ${a.n} | Sala ${a.s || '-'} | ${a.p} | ${a.t.join(', ')}`);
+  }));
+  const dg = DIGITAIS.filter(x => state.dig.includes(x.id));
+  if (dg.length) { lines.push('', 'ATIVIDADES DIGITAIS'); dg.forEach(x => lines.push(`${x.c} | ${x.n} | ${x.p} | ${x.t.join(', ')}`)); }
+  return lines.join('\n');
+}
+$('btnCopy').onclick = () => {
+  const txt = asText(), ta = $('copyArea');
+  const fallback = () => { ta.value = txt; ta.hidden = false; ta.focus(); ta.select(); toast('Selecionei o texto abaixo do resumo. Use Ctrl+C para copiar.'); };
+  try { navigator.clipboard.writeText(txt).then(() => toast('Grade copiada'), fallback); } catch (e) { fallback(); }
+};
+let clearArmed = null;
+$('btnClear').onclick = () => {
+  const b = $('btnClear');
+  if (!clearArmed) { b.textContent = 'Clique de novo para confirmar'; clearArmed = setTimeout(() => { b.textContent = 'Limpar grade'; clearArmed = null; }, 3000); return; }
+  clearTimeout(clearArmed); clearArmed = null; b.textContent = 'Limpar grade';
+  state.sel = {}; state.dig = []; save(); renderAll(); renderDig(); toast('Grade limpa');
+};
+
+let tt;
+function toast(m) { const t = $('toast'); t.textContent = m; t.hidden = false; clearTimeout(tt); tt = setTimeout(() => t.hidden = true, 3200); }
+
+
+// identificação do aluno (vale para todos os bimestres)
+const CAMPOS_ALUNO = { alunoNome: 'nome', alunoMat: 'mat', alunoTurma: 'turma' };
+function preencherAluno() { for (const [id, k] of Object.entries(CAMPOS_ALUNO)) $(id).value = state.aluno[k] || ''; }
+for (const [id, k] of Object.entries(CAMPOS_ALUNO)) $(id).addEventListener('input', e => { state.aluno[k] = e.target.value; save(); });
+preencherAluno();
+// ui/bimestre.js — escolha do bimestre (B1-2026 … B4-2026) e carregamento da oferta correspondente
+let BIMESTRES = { bimestres: [], disponiveis: [] };
+
+function renderBimestres() {
+  $('bimOpcoes').innerHTML = BIMESTRES.bimestres.map(b => {
+    const ok = BIMESTRES.disponiveis.includes(b) || b === BIM;
+    const [bi, ano] = b.split('-');
+    return `<button type="button" class="bim-op${b === BIM ? ' on' : ''}" role="radio" aria-checked="${b === BIM}" data-bim="${esc(b)}" ${ok ? '' : 'disabled'}>
+      <b>${esc(bi)}</b><span>${esc(ano || '')}</span><small>${ok ? (b === BIM ? 'aberta' : 'ofertas publicadas') : 'sem oferta ainda'}</small></button>`;
+  }).join('');
+}
+
+// aplica uma oferta já lida (do site ou de um arquivo) como o bimestre aberto
+function abrirOferta(bim, dados) {
+  definirOfertas(dados.aulas, dados.digitais, dados.ch);
+  BIM = bim;
+  gravarJSON(CHAVE_BIMESTRE, bim);
+  if (!BIMESTRES.bimestres.includes(bim)) BIMESTRES.bimestres.push(bim);
+  carregarGradeSalva(bim);
+  $('bimStatus').textContent = `${bim}: ${new Set(OFERTAS.map(a => a.c)).size} disciplinas presenciais em ${OFERTAS.length} ofertas e ${DIGITAIS.length} atividades digitais.`;
+  document.body.classList.remove('sem-oferta');
+  renderBimestres(); montarFiltros(); renderAll(); renderDig();
+}
+
+async function selecionarBimestre(bim) {
+  $('bimStatus').textContent = `Carregando ofertas de ${bim}…`;
+  try { abrirOferta(bim, await baixarOfertas(bim)); return true; }
+  catch (e) { $('bimStatus').textContent = `Não consegui carregar ${bim}: ${e.message}. Se abriu o arquivo direto do computador, use “Abrir planilha de ofertas”.`; return false; }
+}
+
+$('bimOpcoes').addEventListener('click', e => {
+  const b = e.target.closest('[data-bim]'); if (!b || b.disabled || b.dataset.bim === BIM) return;
+  selecionarBimestre(b.dataset.bim);
+});
+
+// alternativa sem internet/servidor: abrir a planilha de ofertas pelo computador (nome do arquivo = bimestre)
+$('btnOfertaArq').onclick = () => $('ofertaIn').click();
+$('ofertaIn').addEventListener('change', async e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  try {
+    const bim = (f.name.match(/B\d-\d{4}/i)?.[0] || f.name.replace(/\.xlsx$/i, '')).toUpperCase();
+    abrirOferta(bim, lerPlanilhaOfertas(await f.arrayBuffer()));
+    toast(`Ofertas de ${bim} abertas a partir do arquivo`);
+  } catch (err) { toast('Não consegui ler a planilha de ofertas: ' + err.message); }
+});
+
+async function iniciarBimestres() {
+  document.body.classList.add('sem-oferta');
+  try { BIMESTRES = await lerIndiceOfertas(); }
+  catch (e) { BIMESTRES = { bimestres: [], disponiveis: [] }; }
+  renderBimestres();
+  const salvo = lerJSON(CHAVE_BIMESTRE);
+  const inicial = BIMESTRES.disponiveis.includes(salvo) ? salvo : BIMESTRES.disponiveis[BIMESTRES.disponiveis.length - 1];
+  if (inicial) await selecionarBimestre(inicial);
+  else $('bimStatus').textContent = BIMESTRES.bimestres.length
+    ? 'Nenhum bimestre tem oferta publicada ainda.'
+    : 'Não consegui ler a lista de ofertas do site. Se abriu o arquivo direto do computador, use “Abrir planilha de ofertas” e escolha o B4-2026.xlsx.';
+}
+// io/arquivos.js — exportar PDF/Excel, salvar e carregar a grade (.json ou Excel exportado)
+
+// ---------- export / save / load ----------
+const FILE_TAG = 'montador-grade-2026';
+let downloadsNs;
+const downloadsReady = (window.claude?.use ? window.claude.use('downloads') : Promise.resolve(null))
+  .then(ns => (downloadsNs = ns)).catch(() => (downloadsNs = null));
+
+const stamp = () => { const d = new Date(), p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`; };
+const chosenList = () => {
+  const out = [];
+  DIAS.forEach((dn, d) => HORAS.forEach((hr, h) => { const a = BY_ID[state.sel[slotKey(d, h)]]; if (a) out.push({ d, h, a }); }));
+  return out;
+};
+const chosenDig = () => DIGITAIS.filter(x => state.dig.includes(x.id));
+const fileState = () => ({ app: FILE_TAG, versao: 1, nome: gradeNome(), bimestre: BIM, aluno: aluno(), salvoEm: new Date().toISOString(),
+  aulas: chosenList().map(({ d, h, a }) => ({ dia: DIAS[d], horario: HORAS[h], codigo: a.c, sala: a.s, professor: a.p, id: a.id })),
+  digitais: chosenDig().map(x => ({ codigo: x.c, professor: x.p, id: x.id })) });
+
+async function offerFile(filename, data, okMsg) {
+  await downloadsReady;
+  if (!downloadsNs) {
+    // page opened straight in a browser (e.g. the .html in Chrome): use a normal download
+    try {
+      const blob = data instanceof Blob ? data : new Blob([data], { type: 'application/octet-stream' });
+      const url = URL.createObjectURL(blob), link = document.createElement('a');
+      link.href = url; link.download = filename; document.body.appendChild(link); link.click(); link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 4000);
+      toast(okMsg + ' (veja a pasta Downloads)'); return true;
+    } catch (e) { toast('O navegador bloqueou o download. Tente abrir a página pelo link do claude.ai.'); return false; }
+  }
+  try { const r = await downloadsNs.save({ filename, data }); if (r.status === 'saved') toast(okMsg); return true; }
+  catch (e) {
+    const c = e && e.code;
+    if (c === 'declined') toast('Download cancelado.');
+    else if (c === 'rate_limited') toast('Já existe uma confirmação de download aberta.');
+    else toast('Não foi possível salvar o arquivo aqui (' + (c || 'erro') + ').');
+    return false;
+  }
+}
+async function busy(btn, fn) { btn.disabled = true; try { await fn(); } finally { btn.disabled = false; } }
+const needOne = () => { if (!Object.keys(state.sel).length && !state.dig.length) { toast('Sua grade está vazia. Escolha ao menos uma disciplina.'); return false; } return true; };
+
+// ---- Excel ----
+function buildWorkbook() {
+  const XL = window.XLSX;
+  const wb = XL.utils.book_new();
+  const cellTxt = a => a ? `${isPrio(a.c) ? '★ PENDENTE\n' : ''}${a.n}\n${a.c} · ${chLabel(a.c)}\n${a.p || ''}\nSala ${a.s || '-'}\n${a.t.join(', ')}` : '';
+  const a0 = aluno();
+  const info = [['Grade', gradeNome()], ['Aluno', a0.nome], ['Matrícula', a0.mat], ['Turma', a0.turma], []];
+  const g = [...info, ['Horário', ...DIAS]];
+  HORAS.forEach((hr, h) => {
+    if (h === 1) g.push(['INTERVALO 20:30 - 20:45', '', '', '', '', '', '']);
+    g.push([hr, ...DIAS.map((_, d) => cellTxt(BY_ID[state.sel[slotKey(d, h)]]))]);
+  });
+  const ws1 = XL.utils.aoa_to_sheet(g);
+  ws1['!cols'] = [{ wch: 16 }, ...DIAS.map(() => ({ wch: 34 }))];
+  ws1['!rows'] = [...info.map(() => ({ hpt: 16 })), { hpt: 20 }, { hpt: 110 }, { hpt: 18 }, { hpt: 110 }];
+  ws1['!merges'] = [{ s: { r: info.length + 2, c: 0 }, e: { r: info.length + 2, c: 6 } }];
+  XL.utils.book_append_sheet(wb, ws1, 'Grade');
+
+  const l = [['Dia', 'Horário', 'Código', 'Disciplina', 'C.H.', 'Professor', 'Sala', 'Turmas', 'Prioridade (pendente)']];
+  chosenList().forEach(({ d, h, a }) => l.push([DIAS[d], HORAS[h], a.c, a.n, chLabel(a.c), a.p, a.s, a.t.join(', '), isPrio(a.c) ? 'SIM' : '']));
+  const ws2 = XL.utils.aoa_to_sheet(l);
+  ws2['!cols'] = [{ wch: 14 }, { wch: 14 }, { wch: 12 }, { wch: 60 }, { wch: 14 }, { wch: 30 }, { wch: 8 }, { wch: 30 }, { wch: 12 }];
+  ws2['!autofilter'] = { ref: `A1:I${l.length}` };
+  XL.utils.book_append_sheet(wb, ws2, 'Lista');
+
+  const dg = [['Código', 'Disciplina', 'Professor', 'Turmas', 'Prioridade (pendente)']];
+  chosenDig().forEach(x => dg.push([x.c, x.n, x.p, x.t.join(', '), isPrio(x.c) ? 'SIM' : '']));
+  const ws3 = XL.utils.aoa_to_sheet(dg);
+  ws3['!cols'] = [{ wch: 12 }, { wch: 70 }, { wch: 30 }, { wch: 30 }, { wch: 12 }];
+  XL.utils.book_append_sheet(wb, ws3, 'Atividades Digitais');
+
+  const chosen = new Set([...chosenList().map(o => o.a.c), ...chosenDig().map(x => x.c)]);
+  const pd = [['Código', 'Disciplina', 'C.H.', 'Ofertada', 'Na grade']];
+  PENDENTES.forEach(p => {
+    const pres = OFERTAS.filter(a => a.c === p.c), dig = DIGITAIS.some(x => x.c === p.c);
+    pd.push([p.c, nomeDe(p.c), chInfo(p.c).h, pres.length ? 'Presencial: ' + [...new Set(pres.map(whenTxt))].join(', ') : dig ? 'Atividade digital' : 'Não ofertada', chosen.has(p.c) ? 'SIM' : '']);
+  });
+  const ws4 = XL.utils.aoa_to_sheet(pd);
+  ws4['!cols'] = [{ wch: 12 }, { wch: 70 }, { wch: 6 }, { wch: 40 }, { wch: 9 }];
+  XL.utils.book_append_sheet(wb, ws4, 'Pendências');
+
+  // hidden sheet used by "Carregar grade" to restore exactly this grade
+  const ws5 = XL.utils.aoa_to_sheet([[FILE_TAG], [JSON.stringify(fileState())]]);
+  XL.utils.book_append_sheet(wb, ws5, '_dados');
+  wb.Workbook = { Sheets: [{}, {}, {}, {}, { Hidden: 1 }] };
+  return wb;
+}
+$('btnXlsx').onclick = e => busy(e.currentTarget, async () => {
+  if (!needOne()) return;
+  if (!window.XLSX) { toast('A biblioteca do Excel ainda está carregando. Tente de novo em instantes.'); return; }
+  const buf = XLSX.write(buildWorkbook(), { bookType: 'xlsx', type: 'array' });
+  await offerFile(`${arquivoNome()}.xlsx`, new Blob([buf]), 'Excel salvo. Ele também pode ser usado em “Carregar grade”.');
+});
+
+// ---- PDF ----
+$('btnPdf').onclick = e => busy(e.currentTarget, async () => {
+  if (!needOne()) return;
+  if (!window.jspdf || !window.jspdf.jsPDF) { toast('A biblioteca de PDF ainda está carregando. Tente de novo em instantes.'); return; }
+  const doc = new window.jspdf.jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
+  const W = doc.internal.pageSize.getWidth();
+  const ORANGE = [226, 87, 15], PINK = [194, 29, 91];
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(16); doc.text(`Grade ${gradeNome()}`, 32, 36);
+  let topo = 52;
+  if (alunoLinha()) { doc.setFont('helvetica', 'normal'); doc.setFontSize(10.5); doc.setTextColor(40); doc.text(alunoLinha(), 32, topo); topo += 14; }
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(110);
+  doc.text(`Gerada em ${new Date().toLocaleDateString('pt-BR')} · borda rosa: disciplina pendente (prioridade)`, 32, topo); doc.setTextColor(0);
+
+  // quadro da semana no mesmo layout da página: um cartão por horário escolhido
+  const slotDe = c => BY_ID[state.sel[slotKey(c.column.index - 1, c.row.index === 0 ? 0 : 1)]];
+  const body = [];
+  HORAS.forEach((hr, h) => {
+    if (h === 1) body.push([{ content: 'INTERVALO · 20:30 – 20:45', colSpan: 7, styles: { halign: 'center', fillColor: [238, 234, 229], textColor: 110, fontStyle: 'bold', fontSize: 7, cellPadding: 3, minCellHeight: 0 } }]);
+    body.push([hr.replace(' - ', '\nàs\n'), ...DIAS.map(() => '')]);
+  });
+  const desenharCartao = (a, x, y, w, hCel) => {
+    const pad = 4, cx = x + w / 2, iw = w - 2 * pad - 10;
+    const prio = isPrio(a.c), order = Object.keys(state.sel).filter(k => BY_ID[state.sel[k]]?.c === a.c).sort().indexOf(slotKey(a.d, a.h)) + 1;
+    doc.setFillColor(255, 247, 241);
+    if (prio) { doc.setDrawColor(...PINK); doc.setLineWidth(1.2); } else { doc.setDrawColor(228, 222, 215); doc.setLineWidth(.6); }
+    doc.roundedRect(x + pad, y + pad, w - 2 * pad, hCel - 2 * pad, 4, 4, 'FD');
+    if (prio) { doc.setFillColor(...PINK); doc.rect(x + pad + 3, y + pad, w - 2 * pad - 6, 2.2, 'F'); }
+    let ty = y + pad + 13;
+    const linhas = (txt, font, style, size, color, lh) => {
+      doc.setFont(font, style); doc.setFontSize(size); doc.setTextColor(...color);
+      for (const ln of doc.splitTextToSize(txt, iw)) { doc.text(ln, cx, ty, { align: 'center' }); ty += lh; }
+    };
+    linhas(a.n, 'helvetica', 'bold', 8, [30, 26, 22], 9.4);
+    // código numa caixinha laranja
+    doc.setFont('courier', 'bold'); doc.setFontSize(7.5);
+    const cw = doc.getTextWidth(a.c) + 8; ty += 2;
+    doc.setDrawColor(...ORANGE); doc.setLineWidth(.9); doc.roundedRect(cx - cw / 2, ty - 7.5, cw, 10.5, 1.5, 1.5, 'S');
+    doc.setTextColor(...ORANGE); doc.text(a.c, cx, ty, { align: 'center' }); ty += 12;
+    linhas(`${chLabel(a.c)} · ${SLOT_H}h aqui (${order}/${slotsNeeded(a.c)})`, 'helvetica', 'normal', 6.5, [110, 104, 97], 8.5);
+    linhas(a.p || 'Professor a definir', 'helvetica', 'normal', 7, [110, 104, 97], 8.5);
+    ty += 2; linhas(a.s ? `Sala ${a.s}` : 'Sem sala', 'courier', 'bold', 8.5, [30, 26, 22], 11);
+    linhas(a.t.join(' · '), 'helvetica', 'normal', 6.5, [110, 104, 97], 8);
+    doc.setTextColor(0); doc.setLineWidth(.6);
+  };
+  doc.autoTable({
+    startY: topo + 10, head: [['', ...DIAS]], body, theme: 'grid', margin: { left: 32, right: 32 },
+    styles: { fontSize: 7.5, cellPadding: 5, valign: 'middle', halign: 'center', lineColor: [228, 222, 215], lineWidth: .6, minCellHeight: 128 },
+    headStyles: { fillColor: ORANGE, textColor: 255, fontStyle: 'bold', fontSize: 9, minCellHeight: 0 },
+    columnStyles: Object.assign({ 0: { cellWidth: 46, fillColor: [253, 238, 228], textColor: ORANGE, fontStyle: 'bold' } }, ...DIAS.map((_, i) => ({ [i + 1]: { cellWidth: (W - 64 - 46) / 6 } }))),
+    didDrawCell: c => {
+      if (c.section !== 'body' || c.column.index === 0 || c.row.index === 1) return;
+      const a = slotDe(c);
+      if (a) desenharCartao(a, c.cell.x, c.cell.y, c.cell.width, c.cell.height);
+      else if (!offersAt(c.column.index - 1, c.row.index === 0 ? 0 : 1).length) {
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.setTextColor(150);
+        doc.text('Sem oferta', c.cell.x + c.cell.width / 2, c.cell.y + c.cell.height / 2, { align: 'center' }); doc.setTextColor(0);
+      }
+    }
+  });
+  const M = { left: 32, right: 32 };
+  const PINK_SOFT = [253, 235, 242], GREEN = [31, 122, 74];
+  // tabelas no formato do "Resumo da grade" da página
+  const RES_HEAD = [['Código', 'Disciplina', 'Professor', 'C.H.', 'Horários', 'Sala', 'Turma']];
+  const RES_STYLE = { theme: 'grid', margin: M, styles: { fontSize: 8, cellPadding: 4, lineColor: [228, 222, 215], lineWidth: .5, valign: 'middle' },
+    headStyles: { fillColor: ORANGE, textColor: 255, fontStyle: 'bold' },
+    columnStyles: { 0: { cellWidth: 70, fontStyle: 'bold', textColor: ORANGE }, 3: { cellWidth: 70 }, 4: { cellWidth: 90 }, 5: { cellWidth: 48 }, 6: { cellWidth: 120 } } };
+  const pinkRows = codes => c => { if (c.section === 'body' && codes[c.row.index]) c.cell.styles.fillColor = PINK_SOFT; };
+  const secao = (txt, y) => { doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(40); doc.text(txt, 32, y); doc.setTextColor(0); };
+
+  // página 1: quadro de horários + atividades digitais marcadas
+  const dg = chosenDig().sort((x, y) => x.n.localeCompare(y.n));
+  const hDig = dg.reduce((s, x) => s + chInfo(x.c).h, 0);
+  const digRow = x => [x.c, x.n, x.p, chLabel(x.c), 'Digital · sem horário fixo', 'Online', x.t.join(', ')];
+  if (dg.length) {
+    let y = doc.lastAutoTable.finalY + 22;
+    secao(`Atividades digitais marcadas · ${hDig}h`, y);
+    doc.autoTable({ ...RES_STYLE, startY: y + 6, head: RES_HEAD, body: dg.map(digRow), didParseCell: pinkRows(dg.map(x => isPrio(x.c))) });
+  }
+
+  // página 2: resumo geral da grade
+  doc.addPage();
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(16); doc.text('Resumo geral da grade', 32, 36);
+  const groups = {};
+  chosenList().forEach(({ a }) => { (groups[a.c] ||= { a, slots: [], salas: new Set(), turmas: new Set() }); groups[a.c].slots.push(a); if (a.s) groups[a.c].salas.add(a.s); a.t.forEach(t => groups[a.c].turmas.add(t)); });
+  const pres = Object.values(groups).sort((x, y) => x.a.n.localeCompare(y.a.n));
+  const hPres = pres.reduce((s, g) => s + chInfo(g.a.c).h, 0);
+  const nPend = new Set([...pres.map(g => g.a.c), ...dg.map(x => x.c)].filter(isPrio)).size;
+  const stats = [[`${pres.length + dg.length}`, 'disciplinas'], [`${Object.keys(state.sel).length}`, 'horários/semana'], [`${hPres + hDig}h`, 'carga horária total'],
+    [`${hPres}h`, 'presencial'], [`${hDig}h`, 'digital'], [`${nPend} de ${PENDENTES.length}`, 'pendências na grade']];
+  const bw = (W - 64 - 5 * 10) / 6;
+  stats.forEach(([v, l], i) => {
+    const x = 32 + i * (bw + 10);
+    doc.setDrawColor(228, 222, 215); doc.setFillColor(250, 248, 246); doc.roundedRect(x, 48, bw, 44, 4, 4, 'FD');
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(15); doc.setTextColor(30); doc.text(v, x + 10, 70);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(110); doc.text(l.toUpperCase(), x + 10, 84);
+  });
+  doc.setTextColor(0);
+  const presRow = g => { const need = slotsNeeded(g.a.c), used = g.slots.length;
+    return [g.a.c, g.a.n, g.a.p, `${chLabel(g.a.c)}\n${used}/${need} horários`,
+      g.slots.sort((x, y) => x.d - y.d || x.h - y.h).map(whenTxt).join('\n'), [...g.salas].join(', ') || '-', [...g.turmas].join(', ')]; };
+  const resBody = [];
+  const prioFlags = [];
+  if (pres.length) {
+    resBody.push([{ content: `Presenciais · ${hPres}h`, colSpan: 7, styles: { fillColor: [238, 234, 229], fontStyle: 'bold', textColor: 90 } }]); prioFlags.push(false);
+    pres.forEach(g => { resBody.push(presRow(g)); prioFlags.push(isPrio(g.a.c)); });
+  }
+  if (dg.length) {
+    resBody.push([{ content: `Atividades digitais · ${hDig}h`, colSpan: 7, styles: { fillColor: [238, 234, 229], fontStyle: 'bold', textColor: 90 } }]); prioFlags.push(false);
+    dg.forEach(x => { resBody.push(digRow(x)); prioFlags.push(isPrio(x.c)); });
+  }
+  doc.autoTable({ ...RES_STYLE, startY: 108, head: RES_HEAD, body: resBody, didParseCell: pinkRows(prioFlags) });
+
+  const chosen = new Set([...pres.map(g => g.a.c), ...dg.map(x => x.c)]);
+  // página 3 em diante: pendências e a situação de cada uma
+  doc.addPage();
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(16); doc.text('Pendências', 32, 36);
+  const pendRows = PENDENTES.map(p => {
+    const pr = OFERTAS.filter(a => a.c === p.c), dgt = DIGITAIS.some(x => x.c === p.c);
+    const oferta = pr.length ? 'Presencial: ' + [...new Set(pr.map(whenTxt))].join(', ') : dgt ? 'Atividade digital' : 'Não ofertada';
+    const usados = slotsUsed(p.c), need = slotsNeeded(p.c);
+    const status = chosen.has(p.c) ? (pr.length ? `Na grade (${usados}/${need} horários)` : 'Na grade (digital)') : (pr.length || dgt) ? 'Ofertada, fora da grade' : 'Não ofertada';
+    return [p.c, nomeDe(p.c), chLabel(p.c), oferta, status];
+  });
+  const cont = s => pendRows.filter(r => r[4].startsWith(s)).length;
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(110);
+  doc.text(`${PENDENTES.length} pendentes · ${cont('Na grade')} na grade · ${cont('Ofertada')} ofertadas fora da grade · ${cont('Não ofertada')} não ofertadas neste período`, 32, 52);
+  doc.setTextColor(0);
+  doc.autoTable({ startY: 64, head: [['Código', 'Disciplina', 'C.H.', 'Oferta neste período', 'Status']], body: pendRows,
+    theme: 'grid', margin: M, styles: { fontSize: 8, cellPadding: 4, lineColor: [228, 222, 215], lineWidth: .5, valign: 'middle' },
+    headStyles: { fillColor: PINK, textColor: 255, fontStyle: 'bold' },
+    columnStyles: { 0: { cellWidth: 70, fontStyle: 'bold' }, 2: { cellWidth: 36 }, 3: { cellWidth: 170 }, 4: { cellWidth: 130, fontStyle: 'bold' } },
+    didParseCell: c => {
+      if (c.section !== 'body') return;
+      const st = c.row.raw[4];
+      if (st.startsWith('Na grade')) { c.cell.styles.fillColor = [230, 244, 236]; if (c.column.index === 4) c.cell.styles.textColor = GREEN; }
+      else if (st.startsWith('Ofertada')) { if (c.column.index === 4) c.cell.styles.textColor = [168, 70, 12]; }
+      else { c.cell.styles.textColor = 140; }
+    } });
+
+  // rodapé com numeração
+  const n = doc.getNumberOfPages(), H = doc.internal.pageSize.getHeight();
+  for (let i = 1; i <= n; i++) { doc.setPage(i); doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(140); doc.text(`Página ${i} de ${n}`, W - 32, H - 16, { align: 'right' }); doc.text([`Grade ${gradeNome()}`, alunoLinha()].filter(Boolean).join(' · '), 32, H - 16); }
+  await offerFile(`${arquivoNome()}.pdf`, doc.output('blob'), 'PDF salvo.');
+});
+
+// ---- save / load grade file ----
+$('btnSaveFile').onclick = e => busy(e.currentTarget, async () => {
+  if (!needOne()) return;
+  await offerFile(`${arquivoNome()}.json`, JSON.stringify(fileState(), null, 2), 'Arquivo da grade salvo. Use “Carregar grade” para abrir de novo.');
+});
+$('btnLoad').onclick = () => $('fileIn').click();
+$('fileIn').addEventListener('change', async e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  try {
+    let data;
+    if (/\.xlsx$/i.test(f.name)) {
+      if (!window.XLSX) throw new Error('A biblioteca do Excel ainda está carregando.');
+      const wb = XLSX.read(await f.arrayBuffer(), { type: 'array' });
+      const ws = wb.Sheets['_dados'];
+      if (!ws) throw new Error('Esse Excel não foi exportado por esta página.');
+      data = JSON.parse(XLSX.utils.sheet_to_json(ws, { header: 1 })[1][0]);
+    } else data = JSON.parse(await f.text());
+    if (!data || data.app !== FILE_TAG) throw new Error('Esse arquivo não é uma grade salva por esta página.');
+    // grade de outro bimestre: abre a oferta dele antes de aplicar as escolhas
+    const bimArq = data.bimestre || (/^B\d-\d{4}$/.test(data.nome || '') ? data.nome : '');
+    if (bimArq && bimArq !== BIM && !(await selecionarBimestre(bimArq))) throw new Error(`a oferta de ${bimArq} não está disponível`);
+    const sel = {}, miss = [];
+    for (const x of data.aulas || []) {
+      let a = BY_ID[x.id];
+      if (!a) { const d = DIAS.indexOf(x.dia), h = HORAS.indexOf(x.horario); a = OFERTAS.find(o => o.d === d && o.h === h && o.c === x.codigo); }
+      if (a) sel[slotKey(a.d, a.h)] = a.id; else miss.push(x.codigo);
+    }
+    const dig = (data.digitais || []).map(x => DIGITAIS.find(y => y.id === x.id) || DIGITAIS.find(y => y.c === x.codigo)).filter(Boolean).map(y => y.id);
+    state.sel = sel; state.dig = dig; state.aluno = { ...ALUNO_VAZIO(), ...(data.aluno || state.aluno) }; preencherAluno(); save(); renderAll(); renderDig();
+    toast(`Grade carregada: ${Object.keys(sel).length} aulas, ${dig.length} digitais` + (miss.length ? ` · não encontradas: ${miss.join(', ')}` : ''));
+  } catch (err) { toast('Não consegui carregar: ' + (err.message || 'arquivo inválido')); }
+});
+// main.js — ponto de entrada: pendências salvas, tela vazia e carregamento do bimestre
+definirPendencias(lerPendenciasSalvas());
+montarFiltros(); renderAll(); renderDig();
+iniciarBimestres();
+</script>
+</body>
+</html>

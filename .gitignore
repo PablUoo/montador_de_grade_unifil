@@ -1,0 +1,9 @@
+# entradas locais: PDF da faculdade (tem nomes de alunos e códigos de Classroom) e planilha pessoal
+assets/*
+!assets/LEIA-ME.md
+
+# intermediários do pipeline (recriados por scripts/build-dados.sh)
+data/
+
+# arquivos temporários do Office
+~$*
