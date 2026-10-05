@@ -207,3 +207,53 @@ body.sem-oferta .sheet, body.sem-oferta .lower { opacity: .45; pointer-events: n
 .pend-acoes { display: flex; gap: 8px; flex-wrap: wrap; }
 .pend-vazio { grid-column: 1 / -1; display: grid; gap: 4px; padding: 14px; border: 1.5px dashed var(--line); border-radius: 9px; color: var(--muted); font-size: .86rem; }
 .pend-vazio b { color: var(--fg); }
+
+/* ---------- passos (1 bimestre → 2 pendências → 3 grade → 4 exportar) ---------- */
+header.top { display: grid; gap: 4px; }
+.step { background: var(--sheet); border: 1px solid var(--line); border-radius: 14px; padding: 18px; display: grid; gap: 14px; min-width: 0; }
+.step-head { display: flex; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+.step-tit { flex: 1 1 260px; min-width: 0; display: grid; gap: 2px; }
+.step-tit .note { margin: 0; max-width: 70ch; }
+.step-n { flex: none; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: var(--accent); color: var(--accent-ink); font-family: var(--f-display); font-weight: 800; font-size: .95rem; margin-top: 1px; }
+.step-body { display: grid; gap: 12px; }
+.tag-opc { font-family: var(--f-body); font-size: .68rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); background: var(--band); border-radius: 999px; padding: 2px 8px; vertical-align: middle; margin-left: 4px; }
+.step .lower { margin-top: 2px; }
+.step .box { background: var(--bg); }
+
+/* passo 2 recolhível */
+details.step > summary { list-style: none; cursor: pointer; }
+details.step > summary::-webkit-details-marker { display: none; }
+details.step > summary .stats { align-self: center; gap: 14px; }
+details.step > summary .stat b { font-size: 1.15rem; }
+details.step > summary .stat span { font-size: .66rem; }
+.chev { align-self: center; width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--line); display: grid; place-items: center; transition: transform .2s; }
+.chev::before { content: ""; width: 7px; height: 7px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: translateY(-2px) rotate(45deg); }
+details[open] > summary .chev { transform: rotate(180deg); }
+details.step:not([open]) { gap: 0; }
+details.step > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 8px; }
+
+/* passo 3: barra de filtros colada na grade */
+.filtros { display: grid; grid-template-columns: minmax(220px, 2fr) auto minmax(150px, 1fr) minmax(180px, 1.4fr) auto; gap: 10px 12px; align-items: end; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); }
+.f-busca { position: relative; align-self: end; }
+.f-busca svg { position: absolute; left: 10px; top: 50%; width: 16px; height: 16px; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+.f-busca input { width: 100%; padding: 9px 10px 9px 34px; font-size: .95rem; background: var(--sheet); }
+.f-campo { display: grid; gap: 4px; min-width: 0; }
+.f-campo select { width: 100%; background: var(--sheet); padding: 8px 10px; }
+.f-rot { font-size: .7rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 600; }
+.filtros .seg button { padding: 8px 14px; background: var(--sheet); }
+.filtros .seg button[aria-pressed=true] { background: var(--accent); }
+.f-toggle { display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--sheet); font-size: .88rem; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.f-toggle input { accent-color: var(--prio); width: 16px; height: 16px; margin: 0; }
+.f-toggle:has(input:checked) { border-color: var(--prio); background: var(--prio-soft); color: var(--fg); }
+.f-info { grid-column: 1 / -1; display: flex; gap: 12px; align-items: center; font-size: .82rem; color: var(--muted); min-height: 1.2em; }
+.f-info b { color: var(--fg); font-variant-numeric: tabular-nums; }
+.linkbtn { font: inherit; font-size: .82rem; font-weight: 600; color: var(--accent); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+@media (max-width: 980px) { .filtros { grid-template-columns: 1fr 1fr; } .f-busca { grid-column: 1 / -1; } }
+@media (max-width: 520px) { .filtros { grid-template-columns: 1fr; } .f-toggle { justify-self: start; } }
+
+/* passo 4: exportar */
+.step .ident { background: var(--bg); }
+.export-acoes { display: flex; flex-wrap: wrap; gap: 10px; }
+.export-acoes .tgroup + .tgroup { padding-left: 10px; border-left: 1px solid var(--line); }
+@media (max-width: 640px) { .export-acoes .tgroup + .tgroup { padding-left: 0; border-left: 0; } }

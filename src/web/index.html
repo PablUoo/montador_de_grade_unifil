@@ -15,110 +15,143 @@
 
 <div class="wrap">
   <header class="top">
-    <div>
-      <div class="eyebrow">UniFil · Ciência da Computação e Engenharia de Software</div>
-      <h1>Monte sua <span>grade</span></h1>
-      <p class="sub">Escolha o bimestre, importe suas pendências e clique no <b>+</b> de um horário para escolher a disciplina. Tudo fica salvo neste navegador; use <b>Salvar grade</b> para guardar um arquivo.</p>
-    </div>
-    <div class="toolbar">
-      <div class="tgroup" aria-label="Exportar">
-        <button class="btn primary" id="btnPdf" type="button">Salvar PDF</button>
-        <button class="btn primary" id="btnXlsx" type="button">Exportar Excel</button>
-      </div>
-      <div class="tgroup" aria-label="Arquivo da grade">
-        <button class="btn" id="btnSaveFile" type="button">Salvar grade</button>
-        <button class="btn" id="btnLoad" type="button">Carregar grade</button>
-        <input type="file" id="fileIn" accept=".json,.xlsx,application/json" hidden>
-      </div>
-      <div class="tgroup">
-        <button class="btn" id="btnCopy" type="button">Copiar texto</button>
-        <button class="btn danger" id="btnClear" type="button">Limpar grade</button>
-      </div>
-    </div>
+    <div class="eyebrow">UniFil · Ciência da Computação e Engenharia de Software</div>
+    <h1>Monte sua <span>grade</span></h1>
+    <p class="sub">Escolha o bimestre, importe suas pendências e clique no <b>+</b> de cada horário. Tudo fica salvo neste navegador.</p>
   </header>
 
-  <section class="bim" aria-labelledby="bimTitulo">
-    <div class="bim-head">
-      <div>
-        <h2 id="bimTitulo">Qual grade você quer montar?</h2>
+  <!-- 1. bimestre -->
+  <section class="step" aria-labelledby="bimTitulo">
+    <div class="step-head">
+      <span class="step-n" aria-hidden="true">1</span>
+      <div class="step-tit">
+        <h2 id="bimTitulo">Escolha o bimestre</h2>
         <p class="note" id="bimStatus">Carregando a lista de bimestres…</p>
       </div>
     </div>
     <div class="bim-opcoes" id="bimOpcoes" role="radiogroup" aria-label="Bimestre"></div>
   </section>
 
-  <section class="ident" aria-label="Identificação do aluno">
-    <div class="field grow">
-      <label for="alunoNome">Nome do aluno</label>
-      <input type="text" id="alunoNome" maxlength="80" placeholder="Nome completo" autocomplete="name">
+  <!-- 2. pendências (recolhível) -->
+  <details class="step pend-box" id="passoPend" open>
+    <summary class="step-head">
+      <span class="step-n" aria-hidden="true">2</span>
+      <div class="step-tit">
+        <h2 id="pendTitle">Suas pendências <span class="tag-opc">opcional</span></h2>
+        <p class="note">Importe um Excel com a coluna <b>Código</b> (ex.: INAR230002). As ofertadas viram prioridade na grade.</p>
+      </div>
+      <div class="stats" id="pendStats"></div>
+      <span class="chev" aria-hidden="true"></span>
+    </summary>
+    <div class="step-body">
+      <div class="pend-acoes">
+        <button class="btn primary" id="btnPendImport" type="button">Importar pendências (.xlsx)</button>
+        <button class="btn" id="btnPendModelo" type="button">Baixar modelo</button>
+        <button class="btn danger" id="btnPendLimpar" type="button" hidden>Remover pendências</button>
+        <input type="file" id="pendIn" accept=".xlsx,.xls,.csv" hidden>
+      </div>
+      <div class="pend-list" id="pendList"></div>
     </div>
-    <div class="field">
-      <label for="alunoMat">Matrícula</label>
-      <input type="text" id="alunoMat" maxlength="20" placeholder="ex.: 000000000" inputmode="numeric" autocomplete="off">
-    </div>
-    <div class="field">
-      <label for="alunoTurma">Turma</label>
-      <input type="text" id="alunoTurma" maxlength="30" placeholder="ex.: E1/2023 ES" list="turmasList" autocomplete="off">
-      <datalist id="turmasList"></datalist>
-    </div>
-    <p class="note ident-note">Ficam salvos só neste navegador e aparecem no PDF, no Excel e no nome dos arquivos exportados.</p>
-  </section>
+  </details>
 
-  <section class="filters" aria-label="Filtros das ofertas">
-    <div class="field">
-      <label>Curso</label>
-      <div class="seg" id="segCurso" role="group" aria-label="Curso">
-        <button type="button" data-v="" aria-pressed="true">Todos</button>
-        <button type="button" data-v="CC" aria-pressed="false">Ciência da Computação</button>
-        <button type="button" data-v="ES" aria-pressed="false">Eng. de Software</button>
+  <!-- 3. grade + filtros -->
+  <section class="step" aria-labelledby="gradeTitulo">
+    <div class="step-head">
+      <span class="step-n" aria-hidden="true">3</span>
+      <div class="step-tit">
+        <h2 id="gradeTitulo">Monte a grade</h2>
+        <p class="note">Clique no <b>+</b> de um horário para ver o que é ofertado. Cada horário vale 15h: disciplina de 30h ocupa 2 horários.</p>
+      </div>
+      <button class="btn small danger" id="btnClear" type="button">Limpar grade</button>
+    </div>
+
+    <div class="filtros" role="search" aria-label="Filtrar ofertas">
+      <div class="f-busca">
+        <label class="sr" for="q">Buscar</label>
+        <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M13 13l4.5 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <input type="search" id="q" placeholder="Buscar disciplina, código ou professor" autocomplete="off">
+      </div>
+      <div class="f-campo">
+        <span class="f-rot" id="rotCurso">Curso</span>
+        <div class="seg" id="segCurso" role="group" aria-labelledby="rotCurso">
+          <button type="button" data-v="" aria-pressed="true">Todos</button>
+          <button type="button" data-v="CC" aria-pressed="false" title="Ciência da Computação">CC</button>
+          <button type="button" data-v="ES" aria-pressed="false" title="Engenharia de Software">ES</button>
+        </div>
+      </div>
+      <div class="f-campo">
+        <label class="f-rot" for="selTurma">Turma</label>
+        <select id="selTurma"><option value="">Todas as turmas</option></select>
+      </div>
+      <div class="f-campo f-codigo">
+        <label class="f-rot" for="selCode">Disciplina</label>
+        <select id="selCode"><option value="">Todas as disciplinas</option></select>
+      </div>
+      <label class="f-toggle" title="Mostrar só as disciplinas da sua planilha de pendências"><input type="checkbox" id="onlyPend"><span>Só pendentes</span></label>
+      <div class="f-info" aria-live="polite">
+        <span id="filtroInfo"></span>
+        <button class="linkbtn" id="btnFiltrosLimpar" type="button" hidden>Limpar filtros</button>
       </div>
     </div>
-    <div class="field">
-      <label for="selTurma">Turma</label>
-      <select id="selTurma"><option value="">Todas as turmas</option></select>
+
+    <div class="sheet">
+      <div class="week" id="grade"></div>
     </div>
-    <div class="field">
-      <label for="selCode">Código da disciplina</label>
-      <select id="selCode"><option value="">Todos os códigos</option></select>
+
+    <div class="lower">
+      <section class="box">
+        <div class="head"><h2>Atividades digitais</h2><span class="note">Sem dia e horário fixos · marque as que vai fazer</span></div>
+        <div class="dig" id="dig"></div>
+      </section>
+      <section class="box">
+        <div class="head"><h2>Resumo da grade</h2></div>
+        <div class="stats" id="stats"></div>
+        <div class="tbl-wrap"><table class="summary" id="summary"></table></div>
+      </section>
     </div>
-    <div class="field" style="flex:1;min-width:180px">
-      <label for="q">Buscar disciplina, código ou professor</label>
-      <input type="search" id="q" placeholder="ex.: Banco de Dados, ALLP230008, Robson">
-    </div>
-    <label class="check prio-toggle"><input type="checkbox" id="onlyPend"> Só pendentes</label>
   </section>
 
-  <section class="box pend-box" aria-labelledby="pendTitle">
-    <div class="head">
-      <div><h2 id="pendTitle">Pendências</h2><p class="note" style="margin:2px 0 0">Importe um Excel com a coluna <b>Código</b> (ex.: INAR230002). As ofertadas viram prioridade; clique em uma para ver só ela na grade.</p></div>
-      <div class="stats" id="pendStats"></div>
+  <!-- 4. exportar -->
+  <section class="step" aria-labelledby="expTitulo">
+    <div class="step-head">
+      <span class="step-n" aria-hidden="true">4</span>
+      <div class="step-tit">
+        <h2 id="expTitulo">Exporte ou salve</h2>
+        <p class="note">Nome, matrícula e turma aparecem no PDF, no Excel e no nome dos arquivos. Ficam só neste navegador.</p>
+      </div>
     </div>
-    <div class="pend-acoes">
-      <button class="btn primary" id="btnPendImport" type="button">Importar pendências (.xlsx)</button>
-      <button class="btn" id="btnPendModelo" type="button">Baixar modelo</button>
-      <button class="btn danger" id="btnPendLimpar" type="button" hidden>Remover pendências</button>
-      <input type="file" id="pendIn" accept=".xlsx,.xls,.csv" hidden>
+    <div class="ident">
+      <div class="field grow">
+        <label for="alunoNome">Nome do aluno</label>
+        <input type="text" id="alunoNome" maxlength="80" placeholder="Nome completo" autocomplete="name">
+      </div>
+      <div class="field">
+        <label for="alunoMat">Matrícula</label>
+        <input type="text" id="alunoMat" maxlength="20" placeholder="ex.: 000000000" inputmode="numeric" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="alunoTurma">Turma</label>
+        <input type="text" id="alunoTurma" maxlength="30" placeholder="ex.: E1/2023 ES" list="turmasList" autocomplete="off">
+        <datalist id="turmasList"></datalist>
+      </div>
     </div>
-    <div class="pend-list" id="pendList"></div>
+    <div class="export-acoes">
+      <div class="tgroup" aria-label="Exportar">
+        <button class="btn primary" id="btnPdf" type="button">Salvar PDF</button>
+        <button class="btn primary" id="btnXlsx" type="button">Exportar Excel</button>
+      </div>
+      <div class="tgroup" aria-label="Arquivo da grade">
+        <button class="btn" id="btnSaveFile" type="button">Salvar grade (.json)</button>
+        <button class="btn" id="btnLoad" type="button">Carregar grade</button>
+        <input type="file" id="fileIn" accept=".json,.xlsx,application/json" hidden>
+      </div>
+      <div class="tgroup">
+        <button class="btn" id="btnCopy" type="button">Copiar como texto</button>
+      </div>
+    </div>
+    <textarea class="copy" id="copyArea" hidden readonly aria-label="Grade em texto"></textarea>
   </section>
-
-  <div class="sheet">
-    <div class="week" id="grade"></div>
-  </div>
-
-  <div class="lower">
-    <section class="box">
-      <div class="head"><h2>Resumo da grade</h2><div class="stats" id="stats"></div></div>
-      <div class="tbl-wrap"><table class="summary" id="summary"></table></div>
-      <textarea class="copy" id="copyArea" hidden readonly aria-label="Grade em texto"></textarea>
-    </section>
-    <section class="box">
-      <div class="head"><h2>Atividades digitais</h2><span class="note">Sem dia e horário fixos</span></div>
-      <div class="dig" id="dig"></div>
-    </section>
-  </div>
 </div>
-
 <div class="scrim" id="scrim" hidden></div>
 <aside class="panel" id="panel" hidden aria-label="Escolher disciplina">
   <div class="panel-head">

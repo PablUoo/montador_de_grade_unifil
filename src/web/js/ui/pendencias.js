@@ -38,7 +38,7 @@ $('pendList').addEventListener('click', e => {
   document.querySelector('.sheet').scrollIntoView({ behavior: 'smooth', block: 'start' });
 });
 
-function aplicarPendencias(lista) { salvarPendencias(lista); montarFiltros(); renderAll(); renderDig(); }
+function aplicarPendencias(lista) { salvarPendencias(lista); montarFiltros(); renderAll(); renderDig(); ajustarQuadroPend(true); }
 $('btnPendImport').onclick = () => $('pendIn').click();
 $('pendIn').addEventListener('change', async e => {
   const f = e.target.files[0]; e.target.value = ''; if (!f) return;
@@ -57,3 +57,11 @@ $('btnPendLimpar').onclick = () => {
   clearTimeout(pendArmed); pendArmed = null; b.textContent = 'Remover pendências';
   aplicarPendencias([]); toast('Pendências removidas');
 };
+
+// quadro recolhível: abre sozinho enquanto não há pendências; depois lembra a escolha do usuário
+const CHAVE_PEND_ABERTO = 'montador-grade:pendencias-aberto';
+function ajustarQuadroPend(forcarAbrir) {
+  const salvo = lerJSON(CHAVE_PEND_ABERTO);
+  $('passoPend').open = forcarAbrir || !PENDENTES.length || (salvo ?? true);
+}
+$('passoPend').addEventListener('toggle', () => { if (PENDENTES.length) gravarJSON(CHAVE_PEND_ABERTO, $('passoPend').open); });

@@ -217,116 +217,199 @@ body.sem-oferta .sheet, body.sem-oferta .lower { opacity: .45; pointer-events: n
 .pend-acoes { display: flex; gap: 8px; flex-wrap: wrap; }
 .pend-vazio { grid-column: 1 / -1; display: grid; gap: 4px; padding: 14px; border: 1.5px dashed var(--line); border-radius: 9px; color: var(--muted); font-size: .86rem; }
 .pend-vazio b { color: var(--fg); }
+
+/* ---------- passos (1 bimestre → 2 pendências → 3 grade → 4 exportar) ---------- */
+header.top { display: grid; gap: 4px; }
+.step { background: var(--sheet); border: 1px solid var(--line); border-radius: 14px; padding: 18px; display: grid; gap: 14px; min-width: 0; }
+.step-head { display: flex; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+.step-tit { flex: 1 1 260px; min-width: 0; display: grid; gap: 2px; }
+.step-tit .note { margin: 0; max-width: 70ch; }
+.step-n { flex: none; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: var(--accent); color: var(--accent-ink); font-family: var(--f-display); font-weight: 800; font-size: .95rem; margin-top: 1px; }
+.step-body { display: grid; gap: 12px; }
+.tag-opc { font-family: var(--f-body); font-size: .68rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); background: var(--band); border-radius: 999px; padding: 2px 8px; vertical-align: middle; margin-left: 4px; }
+.step .lower { margin-top: 2px; }
+.step .box { background: var(--bg); }
+
+/* passo 2 recolhível */
+details.step > summary { list-style: none; cursor: pointer; }
+details.step > summary::-webkit-details-marker { display: none; }
+details.step > summary .stats { align-self: center; gap: 14px; }
+details.step > summary .stat b { font-size: 1.15rem; }
+details.step > summary .stat span { font-size: .66rem; }
+.chev { align-self: center; width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--line); display: grid; place-items: center; transition: transform .2s; }
+.chev::before { content: ""; width: 7px; height: 7px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: translateY(-2px) rotate(45deg); }
+details[open] > summary .chev { transform: rotate(180deg); }
+details.step:not([open]) { gap: 0; }
+details.step > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 8px; }
+
+/* passo 3: barra de filtros colada na grade */
+.filtros { display: grid; grid-template-columns: minmax(220px, 2fr) auto minmax(150px, 1fr) minmax(180px, 1.4fr) auto; gap: 10px 12px; align-items: end; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); }
+.f-busca { position: relative; align-self: end; }
+.f-busca svg { position: absolute; left: 10px; top: 50%; width: 16px; height: 16px; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+.f-busca input { width: 100%; padding: 9px 10px 9px 34px; font-size: .95rem; background: var(--sheet); }
+.f-campo { display: grid; gap: 4px; min-width: 0; }
+.f-campo select { width: 100%; background: var(--sheet); padding: 8px 10px; }
+.f-rot { font-size: .7rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 600; }
+.filtros .seg button { padding: 8px 14px; background: var(--sheet); }
+.filtros .seg button[aria-pressed=true] { background: var(--accent); }
+.f-toggle { display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--sheet); font-size: .88rem; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.f-toggle input { accent-color: var(--prio); width: 16px; height: 16px; margin: 0; }
+.f-toggle:has(input:checked) { border-color: var(--prio); background: var(--prio-soft); color: var(--fg); }
+.f-info { grid-column: 1 / -1; display: flex; gap: 12px; align-items: center; font-size: .82rem; color: var(--muted); min-height: 1.2em; }
+.f-info b { color: var(--fg); font-variant-numeric: tabular-nums; }
+.linkbtn { font: inherit; font-size: .82rem; font-weight: 600; color: var(--accent); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+@media (max-width: 980px) { .filtros { grid-template-columns: 1fr 1fr; } .f-busca { grid-column: 1 / -1; } }
+@media (max-width: 520px) { .filtros { grid-template-columns: 1fr; } .f-toggle { justify-self: start; } }
+
+/* passo 4: exportar */
+.step .ident { background: var(--bg); }
+.export-acoes { display: flex; flex-wrap: wrap; gap: 10px; }
+.export-acoes .tgroup + .tgroup { padding-left: 10px; border-left: 1px solid var(--line); }
+@media (max-width: 640px) { .export-acoes .tgroup + .tgroup { padding-left: 0; border-left: 0; } }
 </style>
 </head>
 <body>
 
 <div class="wrap">
   <header class="top">
-    <div>
-      <div class="eyebrow">UniFil · Ciência da Computação e Engenharia de Software</div>
-      <h1>Monte sua <span>grade</span></h1>
-      <p class="sub">Escolha o bimestre, importe suas pendências e clique no <b>+</b> de um horário para escolher a disciplina. Tudo fica salvo neste navegador; use <b>Salvar grade</b> para guardar um arquivo.</p>
-    </div>
-    <div class="toolbar">
-      <div class="tgroup" aria-label="Exportar">
-        <button class="btn primary" id="btnPdf" type="button">Salvar PDF</button>
-        <button class="btn primary" id="btnXlsx" type="button">Exportar Excel</button>
-      </div>
-      <div class="tgroup" aria-label="Arquivo da grade">
-        <button class="btn" id="btnSaveFile" type="button">Salvar grade</button>
-        <button class="btn" id="btnLoad" type="button">Carregar grade</button>
-        <input type="file" id="fileIn" accept=".json,.xlsx,application/json" hidden>
-      </div>
-      <div class="tgroup">
-        <button class="btn" id="btnCopy" type="button">Copiar texto</button>
-        <button class="btn danger" id="btnClear" type="button">Limpar grade</button>
-      </div>
-    </div>
+    <div class="eyebrow">UniFil · Ciência da Computação e Engenharia de Software</div>
+    <h1>Monte sua <span>grade</span></h1>
+    <p class="sub">Escolha o bimestre, importe suas pendências e clique no <b>+</b> de cada horário. Tudo fica salvo neste navegador.</p>
   </header>
 
-  <section class="bim" aria-labelledby="bimTitulo">
-    <div class="bim-head">
-      <div>
-        <h2 id="bimTitulo">Qual grade você quer montar?</h2>
+  <!-- 1. bimestre -->
+  <section class="step" aria-labelledby="bimTitulo">
+    <div class="step-head">
+      <span class="step-n" aria-hidden="true">1</span>
+      <div class="step-tit">
+        <h2 id="bimTitulo">Escolha o bimestre</h2>
         <p class="note" id="bimStatus">Carregando a lista de bimestres…</p>
       </div>
     </div>
     <div class="bim-opcoes" id="bimOpcoes" role="radiogroup" aria-label="Bimestre"></div>
   </section>
 
-  <section class="ident" aria-label="Identificação do aluno">
-    <div class="field grow">
-      <label for="alunoNome">Nome do aluno</label>
-      <input type="text" id="alunoNome" maxlength="80" placeholder="Nome completo" autocomplete="name">
+  <!-- 2. pendências (recolhível) -->
+  <details class="step pend-box" id="passoPend" open>
+    <summary class="step-head">
+      <span class="step-n" aria-hidden="true">2</span>
+      <div class="step-tit">
+        <h2 id="pendTitle">Suas pendências <span class="tag-opc">opcional</span></h2>
+        <p class="note">Importe um Excel com a coluna <b>Código</b> (ex.: INAR230002). As ofertadas viram prioridade na grade.</p>
+      </div>
+      <div class="stats" id="pendStats"></div>
+      <span class="chev" aria-hidden="true"></span>
+    </summary>
+    <div class="step-body">
+      <div class="pend-acoes">
+        <button class="btn primary" id="btnPendImport" type="button">Importar pendências (.xlsx)</button>
+        <button class="btn" id="btnPendModelo" type="button">Baixar modelo</button>
+        <button class="btn danger" id="btnPendLimpar" type="button" hidden>Remover pendências</button>
+        <input type="file" id="pendIn" accept=".xlsx,.xls,.csv" hidden>
+      </div>
+      <div class="pend-list" id="pendList"></div>
     </div>
-    <div class="field">
-      <label for="alunoMat">Matrícula</label>
-      <input type="text" id="alunoMat" maxlength="20" placeholder="ex.: 000000000" inputmode="numeric" autocomplete="off">
-    </div>
-    <div class="field">
-      <label for="alunoTurma">Turma</label>
-      <input type="text" id="alunoTurma" maxlength="30" placeholder="ex.: E1/2023 ES" list="turmasList" autocomplete="off">
-      <datalist id="turmasList"></datalist>
-    </div>
-    <p class="note ident-note">Ficam salvos só neste navegador e aparecem no PDF, no Excel e no nome dos arquivos exportados.</p>
-  </section>
+  </details>
 
-  <section class="filters" aria-label="Filtros das ofertas">
-    <div class="field">
-      <label>Curso</label>
-      <div class="seg" id="segCurso" role="group" aria-label="Curso">
-        <button type="button" data-v="" aria-pressed="true">Todos</button>
-        <button type="button" data-v="CC" aria-pressed="false">Ciência da Computação</button>
-        <button type="button" data-v="ES" aria-pressed="false">Eng. de Software</button>
+  <!-- 3. grade + filtros -->
+  <section class="step" aria-labelledby="gradeTitulo">
+    <div class="step-head">
+      <span class="step-n" aria-hidden="true">3</span>
+      <div class="step-tit">
+        <h2 id="gradeTitulo">Monte a grade</h2>
+        <p class="note">Clique no <b>+</b> de um horário para ver o que é ofertado. Cada horário vale 15h: disciplina de 30h ocupa 2 horários.</p>
+      </div>
+      <button class="btn small danger" id="btnClear" type="button">Limpar grade</button>
+    </div>
+
+    <div class="filtros" role="search" aria-label="Filtrar ofertas">
+      <div class="f-busca">
+        <label class="sr" for="q">Buscar</label>
+        <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M13 13l4.5 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <input type="search" id="q" placeholder="Buscar disciplina, código ou professor" autocomplete="off">
+      </div>
+      <div class="f-campo">
+        <span class="f-rot" id="rotCurso">Curso</span>
+        <div class="seg" id="segCurso" role="group" aria-labelledby="rotCurso">
+          <button type="button" data-v="" aria-pressed="true">Todos</button>
+          <button type="button" data-v="CC" aria-pressed="false" title="Ciência da Computação">CC</button>
+          <button type="button" data-v="ES" aria-pressed="false" title="Engenharia de Software">ES</button>
+        </div>
+      </div>
+      <div class="f-campo">
+        <label class="f-rot" for="selTurma">Turma</label>
+        <select id="selTurma"><option value="">Todas as turmas</option></select>
+      </div>
+      <div class="f-campo f-codigo">
+        <label class="f-rot" for="selCode">Disciplina</label>
+        <select id="selCode"><option value="">Todas as disciplinas</option></select>
+      </div>
+      <label class="f-toggle" title="Mostrar só as disciplinas da sua planilha de pendências"><input type="checkbox" id="onlyPend"><span>Só pendentes</span></label>
+      <div class="f-info" aria-live="polite">
+        <span id="filtroInfo"></span>
+        <button class="linkbtn" id="btnFiltrosLimpar" type="button" hidden>Limpar filtros</button>
       </div>
     </div>
-    <div class="field">
-      <label for="selTurma">Turma</label>
-      <select id="selTurma"><option value="">Todas as turmas</option></select>
+
+    <div class="sheet">
+      <div class="week" id="grade"></div>
     </div>
-    <div class="field">
-      <label for="selCode">Código da disciplina</label>
-      <select id="selCode"><option value="">Todos os códigos</option></select>
+
+    <div class="lower">
+      <section class="box">
+        <div class="head"><h2>Atividades digitais</h2><span class="note">Sem dia e horário fixos · marque as que vai fazer</span></div>
+        <div class="dig" id="dig"></div>
+      </section>
+      <section class="box">
+        <div class="head"><h2>Resumo da grade</h2></div>
+        <div class="stats" id="stats"></div>
+        <div class="tbl-wrap"><table class="summary" id="summary"></table></div>
+      </section>
     </div>
-    <div class="field" style="flex:1;min-width:180px">
-      <label for="q">Buscar disciplina, código ou professor</label>
-      <input type="search" id="q" placeholder="ex.: Banco de Dados, ALLP230008, Robson">
-    </div>
-    <label class="check prio-toggle"><input type="checkbox" id="onlyPend"> Só pendentes</label>
   </section>
 
-  <section class="box pend-box" aria-labelledby="pendTitle">
-    <div class="head">
-      <div><h2 id="pendTitle">Pendências</h2><p class="note" style="margin:2px 0 0">Importe um Excel com a coluna <b>Código</b> (ex.: INAR230002). As ofertadas viram prioridade; clique em uma para ver só ela na grade.</p></div>
-      <div class="stats" id="pendStats"></div>
+  <!-- 4. exportar -->
+  <section class="step" aria-labelledby="expTitulo">
+    <div class="step-head">
+      <span class="step-n" aria-hidden="true">4</span>
+      <div class="step-tit">
+        <h2 id="expTitulo">Exporte ou salve</h2>
+        <p class="note">Nome, matrícula e turma aparecem no PDF, no Excel e no nome dos arquivos. Ficam só neste navegador.</p>
+      </div>
     </div>
-    <div class="pend-acoes">
-      <button class="btn primary" id="btnPendImport" type="button">Importar pendências (.xlsx)</button>
-      <button class="btn" id="btnPendModelo" type="button">Baixar modelo</button>
-      <button class="btn danger" id="btnPendLimpar" type="button" hidden>Remover pendências</button>
-      <input type="file" id="pendIn" accept=".xlsx,.xls,.csv" hidden>
+    <div class="ident">
+      <div class="field grow">
+        <label for="alunoNome">Nome do aluno</label>
+        <input type="text" id="alunoNome" maxlength="80" placeholder="Nome completo" autocomplete="name">
+      </div>
+      <div class="field">
+        <label for="alunoMat">Matrícula</label>
+        <input type="text" id="alunoMat" maxlength="20" placeholder="ex.: 000000000" inputmode="numeric" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="alunoTurma">Turma</label>
+        <input type="text" id="alunoTurma" maxlength="30" placeholder="ex.: E1/2023 ES" list="turmasList" autocomplete="off">
+        <datalist id="turmasList"></datalist>
+      </div>
     </div>
-    <div class="pend-list" id="pendList"></div>
+    <div class="export-acoes">
+      <div class="tgroup" aria-label="Exportar">
+        <button class="btn primary" id="btnPdf" type="button">Salvar PDF</button>
+        <button class="btn primary" id="btnXlsx" type="button">Exportar Excel</button>
+      </div>
+      <div class="tgroup" aria-label="Arquivo da grade">
+        <button class="btn" id="btnSaveFile" type="button">Salvar grade (.json)</button>
+        <button class="btn" id="btnLoad" type="button">Carregar grade</button>
+        <input type="file" id="fileIn" accept=".json,.xlsx,application/json" hidden>
+      </div>
+      <div class="tgroup">
+        <button class="btn" id="btnCopy" type="button">Copiar como texto</button>
+      </div>
+    </div>
+    <textarea class="copy" id="copyArea" hidden readonly aria-label="Grade em texto"></textarea>
   </section>
-
-  <div class="sheet">
-    <div class="week" id="grade"></div>
-  </div>
-
-  <div class="lower">
-    <section class="box">
-      <div class="head"><h2>Resumo da grade</h2><div class="stats" id="stats"></div></div>
-      <div class="tbl-wrap"><table class="summary" id="summary"></table></div>
-      <textarea class="copy" id="copyArea" hidden readonly aria-label="Grade em texto"></textarea>
-    </section>
-    <section class="box">
-      <div class="head"><h2>Atividades digitais</h2><span class="note">Sem dia e horário fixos</span></div>
-      <div class="dig" id="dig"></div>
-    </section>
-  </div>
 </div>
-
 <div class="scrim" id="scrim" hidden></div>
 <aside class="panel" id="panel" hidden aria-label="Escolher disciplina">
   <div class="panel-head">
@@ -563,7 +646,7 @@ function montarFiltros() {
   if (filt.code && !presCodes.has(filt.code)) filt.code = '';
   const opt = c => `<option value="${esc(c)}">${isPrio(c) ? '★ ' : ''}${esc(c)} · ${esc(NOMES[c])}</option>`;
   const pendPres = [...presCodes].filter(isPrio).sort();
-  $('selCode').innerHTML = '<option value="">Todos os códigos</option>' +
+  $('selCode').innerHTML = '<option value="">Todas as disciplinas</option>' +
     (pendPres.length ? `<optgroup label="Pendentes ofertadas">${pendPres.map(opt).join('')}</optgroup>` : '') +
     `<optgroup label="Todas as disciplinas presenciais">${[...presCodes].sort().map(opt).join('')}</optgroup>`;
   $('selCode').value = filt.code;
@@ -571,7 +654,23 @@ function montarFiltros() {
 function setCode(c) { filt.code = c; $('selCode').value = c; renderAll(); }
 $('selCode').addEventListener('change', e => setCode(e.target.value));
 $('onlyPend').addEventListener('change', e => { filt.onlyPend = e.target.checked; renderAll(); });
-function renderAll() { renderGrid(); renderPend(); if (!$('panel').hidden) renderPanel(); }
+function renderAll() { renderGrid(); renderPend(); renderFiltroInfo(); if (!$('panel').hidden) renderPanel(); }
+
+// quantas ofertas os filtros deixam aparecer + atalho para limpar
+const filtrosAtivos = () => [filt.q, filt.curso, filt.turma, filt.code, filt.onlyPend].filter(Boolean).length;
+function renderFiltroInfo() {
+  const n = filtrosAtivos(), total = OFERTAS.length, vis = OFERTAS.filter(matches).length;
+  $('filtroInfo').innerHTML = !total ? '' : n
+    ? `<b>${vis}</b> de ${total} ofertas com ${n} ${n === 1 ? 'filtro' : 'filtros'}${vis ? '' : ' · nenhuma oferta, ajuste os filtros'}`
+    : `${total} ofertas neste bimestre`;
+  $('btnFiltrosLimpar').hidden = !n;
+}
+$('btnFiltrosLimpar').onclick = () => {
+  Object.assign(filt, { q: '', curso: '', turma: '', code: '', onlyPend: false });
+  $('q').value = ''; $('selTurma').value = ''; $('selCode').value = ''; $('onlyPend').checked = false;
+  for (const x of $('segCurso').children) x.setAttribute('aria-pressed', x.dataset.v === '');
+  renderAll(); $('q').focus();
+};
 // ui/pendencias.js — quadro "Pendências": importar planilha, situação de cada pendência no bimestre aberto
 function renderPend() {
   $('btnPendLimpar').hidden = !PENDENTES.length;
@@ -612,7 +711,7 @@ $('pendList').addEventListener('click', e => {
   document.querySelector('.sheet').scrollIntoView({ behavior: 'smooth', block: 'start' });
 });
 
-function aplicarPendencias(lista) { salvarPendencias(lista); montarFiltros(); renderAll(); renderDig(); }
+function aplicarPendencias(lista) { salvarPendencias(lista); montarFiltros(); renderAll(); renderDig(); ajustarQuadroPend(true); }
 $('btnPendImport').onclick = () => $('pendIn').click();
 $('pendIn').addEventListener('change', async e => {
   const f = e.target.files[0]; e.target.value = ''; if (!f) return;
@@ -631,6 +730,14 @@ $('btnPendLimpar').onclick = () => {
   clearTimeout(pendArmed); pendArmed = null; b.textContent = 'Remover pendências';
   aplicarPendencias([]); toast('Pendências removidas');
 };
+
+// quadro recolhível: abre sozinho enquanto não há pendências; depois lembra a escolha do usuário
+const CHAVE_PEND_ABERTO = 'montador-grade:pendencias-aberto';
+function ajustarQuadroPend(forcarAbrir) {
+  const salvo = lerJSON(CHAVE_PEND_ABERTO);
+  $('passoPend').open = forcarAbrir || !PENDENTES.length || (salvo ?? true);
+}
+$('passoPend').addEventListener('toggle', () => { if (PENDENTES.length) gravarJSON(CHAVE_PEND_ABERTO, $('passoPend').open); });
 // ui/grade.js — grade semanal (segunda a sábado × 2 horários)
 // ---------- grid ----------
 function renderGrid() {
@@ -1131,7 +1238,7 @@ $('fileIn').addEventListener('change', async e => {
 });
 // main.js — ponto de entrada: pendências salvas, tela vazia e carregamento do bimestre
 definirPendencias(lerPendenciasSalvas());
-montarFiltros(); renderAll(); renderDig();
+montarFiltros(); renderAll(); renderDig(); ajustarQuadroPend(false);
 iniciarBimestres();
 </script>
 </body>

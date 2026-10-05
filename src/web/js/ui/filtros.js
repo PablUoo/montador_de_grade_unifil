@@ -28,7 +28,7 @@ function montarFiltros() {
   if (filt.code && !presCodes.has(filt.code)) filt.code = '';
   const opt = c => `<option value="${esc(c)}">${isPrio(c) ? '★ ' : ''}${esc(c)} · ${esc(NOMES[c])}</option>`;
   const pendPres = [...presCodes].filter(isPrio).sort();
-  $('selCode').innerHTML = '<option value="">Todos os códigos</option>' +
+  $('selCode').innerHTML = '<option value="">Todas as disciplinas</option>' +
     (pendPres.length ? `<optgroup label="Pendentes ofertadas">${pendPres.map(opt).join('')}</optgroup>` : '') +
     `<optgroup label="Todas as disciplinas presenciais">${[...presCodes].sort().map(opt).join('')}</optgroup>`;
   $('selCode').value = filt.code;
@@ -36,4 +36,20 @@ function montarFiltros() {
 function setCode(c) { filt.code = c; $('selCode').value = c; renderAll(); }
 $('selCode').addEventListener('change', e => setCode(e.target.value));
 $('onlyPend').addEventListener('change', e => { filt.onlyPend = e.target.checked; renderAll(); });
-function renderAll() { renderGrid(); renderPend(); if (!$('panel').hidden) renderPanel(); }
+function renderAll() { renderGrid(); renderPend(); renderFiltroInfo(); if (!$('panel').hidden) renderPanel(); }
+
+// quantas ofertas os filtros deixam aparecer + atalho para limpar
+const filtrosAtivos = () => [filt.q, filt.curso, filt.turma, filt.code, filt.onlyPend].filter(Boolean).length;
+function renderFiltroInfo() {
+  const n = filtrosAtivos(), total = OFERTAS.length, vis = OFERTAS.filter(matches).length;
+  $('filtroInfo').innerHTML = !total ? '' : n
+    ? `<b>${vis}</b> de ${total} ofertas com ${n} ${n === 1 ? 'filtro' : 'filtros'}${vis ? '' : ' · nenhuma oferta, ajuste os filtros'}`
+    : `${total} ofertas neste bimestre`;
+  $('btnFiltrosLimpar').hidden = !n;
+}
+$('btnFiltrosLimpar').onclick = () => {
+  Object.assign(filt, { q: '', curso: '', turma: '', code: '', onlyPend: false });
+  $('q').value = ''; $('selTurma').value = ''; $('selCode').value = ''; $('onlyPend').checked = false;
+  for (const x of $('segCurso').children) x.setAttribute('aria-pressed', x.dataset.v === '');
+  renderAll(); $('q').focus();
+};
