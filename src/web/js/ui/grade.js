@@ -25,8 +25,10 @@ function renderGrid() {
         </div>`;
       } else {
         const all = offersAt(d, h), fl = all.filter(a => matches(a) && disponivelEm(a, k)), n = fl.length, np = fl.filter(a => isPrio(a.c)).length;
+        // com filtro ativo, o horário mostra só o que passa no filtro; sem nada, fica vazio e sem botão
         if (!all.length) html += '<div class="none">Sem oferta</div>';
-        else html += `<button type="button" class="add${np ? ' has-prio' : ''}" data-open="${k}" aria-label="Escolher disciplina: ${DIAS[d]} ${hr}"><b>+</b><span>${n} ${n === 1 ? 'oferta' : 'ofertas'}${n !== all.length ? ` <small>(de ${all.length})</small>` : ''}</span>${np ? `<span class="pcount">${np} ${np === 1 ? 'pendente' : 'pendentes'}</span>` : ''}</button>`;
+        else if (!n) html += `<div class="vazio-filtro" aria-label="Nada neste horário com os filtros atuais"></div>`;
+        else html += `<button type="button" class="add${np ? ' has-prio' : ''}" data-open="${k}" aria-label="Escolher disciplina: ${DIAS[d]} ${hr}"><b>+</b><span>${n} ${n === 1 ? 'oferta' : 'ofertas'}</span>${np ? `<span class="pcount">${np} ${np === 1 ? 'pendente' : 'pendentes'}</span>` : ''}</button>`;
       }
       html += '</div>';
     }

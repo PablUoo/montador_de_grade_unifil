@@ -26,8 +26,6 @@ function renderPanel() {
   }).join('');
   if (!list.length) html += `<p class="empty-list">${all.length ? 'Nenhuma oferta neste horário com os filtros atuais. Ajuste curso, turma, código ou busca.' : 'Não há disciplinas ofertadas neste horário.'}</p>`;
   if (done.length) html += `<p class="note">${done.length} ${done.length === 1 ? 'disciplina oculta' : 'disciplinas ocultas'} porque a carga horária já está completa na sua grade: ${[...new Set(done.map(a => a.c))].map(esc).join(', ')}.</p>`;
-  const filtradas = all.length - list.length - done.length;
-  if (list.length && filtradas > 0) html += `<p class="note">${filtradas} outras ofertas escondidas pelos filtros.</p>`;
   $('pList').innerHTML = html;
 }
 $('pList').addEventListener('click', e => {

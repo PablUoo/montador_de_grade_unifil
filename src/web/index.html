@@ -7,6 +7,7 @@
 <title>Montador de Grade UniFil</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..800&family=JetBrains+Mono:wght@500;600&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.3.1/css/tom-select.min.css">
 <style>
 /*@@ESTILOS@@*/
 </style>
@@ -80,12 +81,12 @@
         </div>
       </div>
       <div class="f-campo">
-        <label class="f-rot" for="selTurma">Turma</label>
-        <select id="selTurma"><option value="">Todas as turmas</option></select>
+        <label class="f-rot" for="selTurma">Turmas</label>
+        <select id="selTurma" multiple aria-label="Turmas"></select>
       </div>
       <div class="f-campo f-codigo">
-        <label class="f-rot" for="selCode">Disciplina</label>
-        <select id="selCode"><option value="">Todas as disciplinas</option></select>
+        <label class="f-rot" for="selCode">Disciplinas</label>
+        <select id="selCode" multiple aria-label="Disciplinas"></select>
       </div>
       <label class="f-toggle" title="Mostrar só as disciplinas da sua planilha de pendências"><input type="checkbox" id="onlyPend"><span>Só pendentes</span></label>
       <div class="f-info" aria-live="polite">

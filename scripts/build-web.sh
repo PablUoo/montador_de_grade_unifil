@@ -10,7 +10,8 @@ MODULOS=(
   "$WEB/js/ui/resumo.js" "$WEB/js/ui/digitais.js" "$WEB/js/ui/acoes.js" "$WEB/js/ui/bimestre.js"
   "$WEB/js/io/arquivos.js" "$WEB/js/main.js"
 )
-LIBS='<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+LIBS='<script src="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.3.1/js/tom-select.complete.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>'
 

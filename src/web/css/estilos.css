@@ -233,7 +233,7 @@ details.step:not([open]) { gap: 0; }
 details.step > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 8px; }
 
 /* passo 3: barra de filtros colada na grade */
-.filtros { display: grid; grid-template-columns: minmax(220px, 2fr) auto minmax(150px, 1fr) minmax(180px, 1.4fr) auto; gap: 10px 12px; align-items: end; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); }
+.filtros { display: grid; grid-template-columns: minmax(220px, 1.6fr) auto minmax(170px, 1fr) minmax(220px, 1.6fr) auto; gap: 10px 12px; align-items: end; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); }
 .f-busca { position: relative; align-self: end; }
 .f-busca svg { position: absolute; left: 10px; top: 50%; width: 16px; height: 16px; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
 .f-busca input { width: 100%; padding: 9px 10px 9px 34px; font-size: .95rem; background: var(--sheet); }
@@ -257,3 +257,25 @@ details.step > summary:focus-visible { outline: 2px solid var(--accent); outline
 .export-acoes { display: flex; flex-wrap: wrap; gap: 10px; }
 .export-acoes .tgroup + .tgroup { padding-left: 10px; border-left: 1px solid var(--line); }
 @media (max-width: 640px) { .export-acoes .tgroup + .tgroup { padding-left: 0; border-left: 0; } }
+/* horário sem nada que passe nos filtros: fica vazio, sem botão */
+.vazio-filtro { flex: 1; border-radius: 8px; }
+
+/* ---------- Tom Select (turmas/disciplinas: busca + múltipla escolha) no tema da página ---------- */
+.f-campo .ts-wrapper { min-width: 0; }
+.f-campo .ts-wrapper.multi .ts-control { min-height: 38px; padding: 4px 30px 4px 8px; gap: 4px; background: var(--sheet); border: 1px solid var(--line); border-radius: 8px; color: var(--fg); font: inherit; font-size: .9rem; box-shadow: none; cursor: text; }
+.f-campo .ts-wrapper.focus .ts-control { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.f-campo .ts-control > input { color: var(--fg); font-size: .9rem; min-width: 7rem; }
+.f-campo .ts-control > input::placeholder { color: var(--muted); }
+.f-campo .ts-wrapper.multi .ts-control > .item { background: var(--accent-soft); color: var(--fg); border: 1px solid var(--accent); border-radius: 6px; padding: 1px 2px 1px 7px; margin: 0; font-size: .8rem; font-weight: 600; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.f-campo .ts-wrapper.plugin-remove_button .item .remove { border-left: 1px solid var(--accent); color: var(--accent); padding: 0 6px; margin-left: 4px; }
+.f-campo .ts-wrapper.plugin-remove_button .item .remove:hover { background: var(--accent); color: var(--accent-ink); }
+.f-campo .ts-wrapper .clear-button { color: var(--muted); right: 8px; font-size: 1.1rem; }
+.ts-dropdown { background: var(--sheet); color: var(--fg); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow); margin-top: 4px; z-index: 30; font-size: .88rem; overflow: hidden; }
+.ts-dropdown .ts-dropdown-content { max-height: 320px; }
+.ts-dropdown .optgroup-header { background: var(--band); color: var(--muted); font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; padding: 6px 10px; }
+.ts-dropdown .option { padding: 7px 10px; color: var(--fg); display: block; line-height: 1.35; }
+.ts-dropdown .option input[type=checkbox] { accent-color: var(--accent); margin: 0 8px 0 0; vertical-align: -2px; }
+.ts-dropdown .active { background: var(--accent-soft); color: var(--fg); }
+.ts-dropdown .selected { font-weight: 600; }
+.ts-dropdown .no-results { padding: 8px 10px; color: var(--muted); }
+.ts-dropdown .highlight { background: color-mix(in srgb, var(--accent) 30%, transparent); color: inherit; border-radius: 2px; }

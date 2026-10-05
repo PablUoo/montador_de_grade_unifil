@@ -7,6 +7,7 @@
 <title>Montador de Grade UniFil</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..800&family=JetBrains+Mono:wght@500;600&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.3.1/css/tom-select.min.css">
 <style>
 /* Layout: a timetable sheet like the PDF — orange day header, two class rows split by the interval band; picker opens as a dialog. */
 :root {
@@ -243,7 +244,7 @@ details.step:not([open]) { gap: 0; }
 details.step > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 8px; }
 
 /* passo 3: barra de filtros colada na grade */
-.filtros { display: grid; grid-template-columns: minmax(220px, 2fr) auto minmax(150px, 1fr) minmax(180px, 1.4fr) auto; gap: 10px 12px; align-items: end; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); }
+.filtros { display: grid; grid-template-columns: minmax(220px, 1.6fr) auto minmax(170px, 1fr) minmax(220px, 1.6fr) auto; gap: 10px 12px; align-items: end; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); }
 .f-busca { position: relative; align-self: end; }
 .f-busca svg { position: absolute; left: 10px; top: 50%; width: 16px; height: 16px; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
 .f-busca input { width: 100%; padding: 9px 10px 9px 34px; font-size: .95rem; background: var(--sheet); }
@@ -267,6 +268,28 @@ details.step > summary:focus-visible { outline: 2px solid var(--accent); outline
 .export-acoes { display: flex; flex-wrap: wrap; gap: 10px; }
 .export-acoes .tgroup + .tgroup { padding-left: 10px; border-left: 1px solid var(--line); }
 @media (max-width: 640px) { .export-acoes .tgroup + .tgroup { padding-left: 0; border-left: 0; } }
+/* horário sem nada que passe nos filtros: fica vazio, sem botão */
+.vazio-filtro { flex: 1; border-radius: 8px; }
+
+/* ---------- Tom Select (turmas/disciplinas: busca + múltipla escolha) no tema da página ---------- */
+.f-campo .ts-wrapper { min-width: 0; }
+.f-campo .ts-wrapper.multi .ts-control { min-height: 38px; padding: 4px 30px 4px 8px; gap: 4px; background: var(--sheet); border: 1px solid var(--line); border-radius: 8px; color: var(--fg); font: inherit; font-size: .9rem; box-shadow: none; cursor: text; }
+.f-campo .ts-wrapper.focus .ts-control { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.f-campo .ts-control > input { color: var(--fg); font-size: .9rem; min-width: 7rem; }
+.f-campo .ts-control > input::placeholder { color: var(--muted); }
+.f-campo .ts-wrapper.multi .ts-control > .item { background: var(--accent-soft); color: var(--fg); border: 1px solid var(--accent); border-radius: 6px; padding: 1px 2px 1px 7px; margin: 0; font-size: .8rem; font-weight: 600; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.f-campo .ts-wrapper.plugin-remove_button .item .remove { border-left: 1px solid var(--accent); color: var(--accent); padding: 0 6px; margin-left: 4px; }
+.f-campo .ts-wrapper.plugin-remove_button .item .remove:hover { background: var(--accent); color: var(--accent-ink); }
+.f-campo .ts-wrapper .clear-button { color: var(--muted); right: 8px; font-size: 1.1rem; }
+.ts-dropdown { background: var(--sheet); color: var(--fg); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow); margin-top: 4px; z-index: 30; font-size: .88rem; overflow: hidden; }
+.ts-dropdown .ts-dropdown-content { max-height: 320px; }
+.ts-dropdown .optgroup-header { background: var(--band); color: var(--muted); font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; padding: 6px 10px; }
+.ts-dropdown .option { padding: 7px 10px; color: var(--fg); display: block; line-height: 1.35; }
+.ts-dropdown .option input[type=checkbox] { accent-color: var(--accent); margin: 0 8px 0 0; vertical-align: -2px; }
+.ts-dropdown .active { background: var(--accent-soft); color: var(--fg); }
+.ts-dropdown .selected { font-weight: 600; }
+.ts-dropdown .no-results { padding: 8px 10px; color: var(--muted); }
+.ts-dropdown .highlight { background: color-mix(in srgb, var(--accent) 30%, transparent); color: inherit; border-radius: 2px; }
 </style>
 </head>
 <body>
@@ -338,12 +361,12 @@ details.step > summary:focus-visible { outline: 2px solid var(--accent); outline
         </div>
       </div>
       <div class="f-campo">
-        <label class="f-rot" for="selTurma">Turma</label>
-        <select id="selTurma"><option value="">Todas as turmas</option></select>
+        <label class="f-rot" for="selTurma">Turmas</label>
+        <select id="selTurma" multiple aria-label="Turmas"></select>
       </div>
       <div class="f-campo f-codigo">
-        <label class="f-rot" for="selCode">Disciplina</label>
-        <select id="selCode"><option value="">Todas as disciplinas</option></select>
+        <label class="f-rot" for="selCode">Disciplinas</label>
+        <select id="selCode" multiple aria-label="Disciplinas"></select>
       </div>
       <label class="f-toggle" title="Mostrar só as disciplinas da sua planilha de pendências"><input type="checkbox" id="onlyPend"><span>Só pendentes</span></label>
       <div class="f-info" aria-live="polite">
@@ -422,6 +445,7 @@ details.step > summary:focus-visible { outline: 2px solid var(--accent); outline
   <div class="panel-list" id="pList"></div>
 </aside>
 <div class="toast" id="toast" hidden></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.3.1/js/tom-select.complete.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
@@ -452,10 +476,10 @@ const isPrio = c => PEND.has(c);
 const PRIO = '<span class="chip prio">PRIORIDADE · pendente</span>';
 
 function matches(a) {
-  if (filt.code && a.c !== filt.code) return false;
+  if (filt.codes.length && !filt.codes.includes(a.c)) return false;
   if (filt.onlyPend && !isPrio(a.c)) return false;
   if (filt.curso && !a.t.some(t => cursoOf(t).includes(filt.curso))) return false;
-  if (filt.turma && !a.t.includes(filt.turma)) return false;
+  if (filt.turmas.length && !a.t.some(t => filt.turmas.includes(t))) return false;
   if (filt.q) {
     const q = norm(filt.q);
     if (!norm(a.n + ' ' + a.c + ' ' + a.p).includes(q)) return false;
@@ -616,8 +640,9 @@ function planilhaModeloPendencias() {
   const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Pendências');
   return new Blob([XLSX.write(wb, { bookType: 'xlsx', type: 'array' })]);
 }
-// ui/filtros.js — filtros de curso, turma, código e busca; renderAll() redesenha a tela
-const filt = { curso: '', turma: '', q: '', code: '', onlyPend: false };
+// ui/filtros.js — filtros de curso, turma(s), disciplina(s), busca e "só pendentes"; renderAll() redesenha a tela
+// Turma e Disciplina usam Tom Select (busca + seleção múltipla). Sem a biblioteca, os <select multiple> nativos continuam funcionando.
+const filt = { curso: '', turmas: [], codes: [], q: '', onlyPend: false };
 
 // ---------- filters ----------
 let turmas = [];
@@ -632,42 +657,77 @@ $('segCurso').addEventListener('click', e => {
   for (const x of $('segCurso').children) x.setAttribute('aria-pressed', x === b);
   renderAll();
 });
-$('selTurma').addEventListener('change', e => { filt.turma = e.target.value; renderAll(); });
 $('q').addEventListener('input', e => { filt.q = e.target.value.trim(); renderAll(); });
+$('onlyPend').addEventListener('change', e => { filt.onlyPend = e.target.checked; renderAll(); });
 
-// opções que dependem da oferta carregada e das pendências: turmas e códigos (pendentes ofertadas primeiro)
+// selects com busca e múltipla escolha
+const valoresDe = sel => [...sel.selectedOptions].map(o => o.value).filter(Boolean);
+function criarMulti(id, placeholder, aoMudar, itemCurto) {
+  const el = $(id);
+  el.addEventListener('change', () => aoMudar(el.tomselect ? el.tomselect.getValue() : valoresDe(el)));
+  if (!window.TomSelect) return null;
+  return new TomSelect(el, {
+    plugins: { remove_button: { title: 'Remover' }, clear_button: { title: 'Limpar' }, checkbox_options: {} },
+    placeholder, maxOptions: null, hidePlaceholder: true, closeAfterSelect: false,
+    searchField: ['text', 'value'], lockOptgroupOrder: true,
+    render: {
+      no_results: () => '<div class="no-results">Nada encontrado</div>',
+      // etiqueta da escolha: só o código (o nome aparece ao passar o mouse)
+      ...(itemCurto ? { item: (d, e) => `<div title="${e(d.text.replace(/^★ /, ''))}">${e(d.value)}</div>` } : {}),
+    },
+  });
+}
+const tsTurma = criarMulti('selTurma', 'Todas as turmas', v => { filt.turmas = v; renderAll(); });
+const tsCode = criarMulti('selCode', 'Todas as disciplinas', v => { filt.codes = v; renderAll(); }, true);
+
+// troca as opções de um select (Tom Select ou nativo) mantendo só os valores que ainda existem
+function preencherMulti(ts, el, grupos, valores) {
+  const validos = new Set(grupos.flatMap(g => g.opcoes.map(o => o.value)));
+  const manter = valores.filter(v => validos.has(v));
+  if (ts) {
+    ts.clear(true); ts.clearOptions(); ts.clearOptionGroups();
+    grupos.forEach((g, i) => { ts.addOptionGroup('g' + i, { label: g.label }); g.opcoes.forEach(o => ts.addOption({ ...o, optgroup: 'g' + i })); });
+    ts.refreshOptions(false); ts.setValue(manter, true);
+  } else {
+    el.innerHTML = grupos.map(g => `<optgroup label="${esc(g.label)}">${g.opcoes.map(o => `<option value="${esc(o.value)}"${manter.includes(o.value) ? ' selected' : ''}>${esc(o.text)}</option>`).join('')}</optgroup>`).join('');
+  }
+  return manter;
+}
+
+// opções que dependem da oferta carregada e das pendências: turmas e disciplinas (pendentes ofertadas primeiro)
 function montarFiltros() {
   turmas = [...new Set(OFERTAS.flatMap(a => a.t))].sort(ordemTurma);
-  if (filt.turma && !turmas.includes(filt.turma)) filt.turma = '';
-  $('selTurma').innerHTML = '<option value="">Todas as turmas</option>' + turmas.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join('');
-  $('selTurma').value = filt.turma;
+  filt.turmas = preencherMulti(tsTurma, $('selTurma'), [{ label: 'Turmas', opcoes: turmas.map(t => ({ value: t, text: t })) }], filt.turmas);
   $('turmasList').innerHTML = turmas.map(t => `<option value="${esc(t)}"></option>`).join('');
-  const presCodes = new Set(OFERTAS.map(a => a.c));
-  if (filt.code && !presCodes.has(filt.code)) filt.code = '';
-  const opt = c => `<option value="${esc(c)}">${isPrio(c) ? '★ ' : ''}${esc(c)} · ${esc(NOMES[c])}</option>`;
-  const pendPres = [...presCodes].filter(isPrio).sort();
-  $('selCode').innerHTML = '<option value="">Todas as disciplinas</option>' +
-    (pendPres.length ? `<optgroup label="Pendentes ofertadas">${pendPres.map(opt).join('')}</optgroup>` : '') +
-    `<optgroup label="Todas as disciplinas presenciais">${[...presCodes].sort().map(opt).join('')}</optgroup>`;
-  $('selCode').value = filt.code;
+  const presCodes = [...new Set(OFERTAS.map(a => a.c))].sort();
+  const opt = c => ({ value: c, text: `${isPrio(c) ? '★ ' : ''}${c} · ${NOMES[c]}` });
+  const pend = presCodes.filter(isPrio);
+  filt.codes = preencherMulti(tsCode, $('selCode'), [
+    ...(pend.length ? [{ label: 'Pendentes ofertadas', opcoes: pend.map(opt) }] : []),
+    { label: pend.length ? 'Demais disciplinas presenciais' : 'Disciplinas presenciais', opcoes: presCodes.filter(c => !isPrio(c)).map(opt) },
+  ], filt.codes);
 }
-function setCode(c) { filt.code = c; $('selCode').value = c; renderAll(); }
-$('selCode').addEventListener('change', e => setCode(e.target.value));
-$('onlyPend').addEventListener('change', e => { filt.onlyPend = e.target.checked; renderAll(); });
+// atalho do quadro de pendências: mostra só essa disciplina (ou volta a mostrar todas)
+function setCode(c) {
+  filt.codes = c ? [c] : [];
+  if (tsCode) tsCode.setValue(filt.codes, true); else for (const o of $('selCode').options) o.selected = filt.codes.includes(o.value);
+  renderAll();
+}
 function renderAll() { renderGrid(); renderPend(); renderFiltroInfo(); if (!$('panel').hidden) renderPanel(); }
 
 // quantas ofertas os filtros deixam aparecer + atalho para limpar
-const filtrosAtivos = () => [filt.q, filt.curso, filt.turma, filt.code, filt.onlyPend].filter(Boolean).length;
+const filtrosAtivos = () => [filt.q, filt.curso, filt.turmas.length, filt.codes.length, filt.onlyPend].filter(Boolean).length;
 function renderFiltroInfo() {
   const n = filtrosAtivos(), total = OFERTAS.length, vis = OFERTAS.filter(matches).length;
   $('filtroInfo').innerHTML = !total ? '' : n
-    ? `<b>${vis}</b> de ${total} ofertas com ${n} ${n === 1 ? 'filtro' : 'filtros'}${vis ? '' : ' · nenhuma oferta, ajuste os filtros'}`
+    ? (vis ? `<b>${vis}</b> ${vis === 1 ? 'oferta' : 'ofertas'} no filtro` : 'Nenhuma oferta com esses filtros')
     : `${total} ofertas neste bimestre`;
   $('btnFiltrosLimpar').hidden = !n;
 }
 $('btnFiltrosLimpar').onclick = () => {
-  Object.assign(filt, { q: '', curso: '', turma: '', code: '', onlyPend: false });
-  $('q').value = ''; $('selTurma').value = ''; $('selCode').value = ''; $('onlyPend').checked = false;
+  Object.assign(filt, { q: '', curso: '', turmas: [], codes: [], onlyPend: false });
+  $('q').value = ''; $('onlyPend').checked = false;
+  for (const [ts, el] of [[tsTurma, $('selTurma')], [tsCode, $('selCode')]]) { if (ts) ts.clear(true); else for (const o of el.options) o.selected = false; }
   for (const x of $('segCurso').children) x.setAttribute('aria-pressed', x.dataset.v === '');
   renderAll(); $('q').focus();
 };
@@ -699,7 +759,7 @@ function renderPend() {
     const inner = `<div class="top"><span class="code">${esc(p.c)}</span><span class="ch">${offered || p.ch ? chLabel(p.c) : ''}</span>${inGrade ? '<span class="done">✓ na grade</span>' : ''}</div>
       <div class="nm">${esc(nomeDe(p.c) || 'Disciplina sem nome na planilha')}</div><div class="st">${st}</div>${hint}`;
     return pres.length
-      ? `<button type="button" class="pitem${filt.code === p.c ? ' active' : ''}" data-code="${esc(p.c)}" title="Mostrar só ${esc(p.c)} na grade">${inner}</button>`
+      ? `<button type="button" class="pitem${filt.codes.length === 1 && filt.codes[0] === p.c ? ' active' : ''}" data-code="${esc(p.c)}" title="Mostrar só ${esc(p.c)} na grade">${inner}</button>`
       : `<div class="pitem${offered ? '' : ' off'}">${inner}</div>`;
   });
   $('pendList').innerHTML = items.join('');
@@ -707,7 +767,7 @@ function renderPend() {
 }
 $('pendList').addEventListener('click', e => {
   const b = e.target.closest('[data-code]'); if (!b) return;
-  setCode(filt.code === b.dataset.code ? '' : b.dataset.code);
+  setCode(filt.codes.length === 1 && filt.codes[0] === b.dataset.code ? '' : b.dataset.code);
   document.querySelector('.sheet').scrollIntoView({ behavior: 'smooth', block: 'start' });
 });
 
@@ -765,8 +825,10 @@ function renderGrid() {
         </div>`;
       } else {
         const all = offersAt(d, h), fl = all.filter(a => matches(a) && disponivelEm(a, k)), n = fl.length, np = fl.filter(a => isPrio(a.c)).length;
+        // com filtro ativo, o horário mostra só o que passa no filtro; sem nada, fica vazio e sem botão
         if (!all.length) html += '<div class="none">Sem oferta</div>';
-        else html += `<button type="button" class="add${np ? ' has-prio' : ''}" data-open="${k}" aria-label="Escolher disciplina: ${DIAS[d]} ${hr}"><b>+</b><span>${n} ${n === 1 ? 'oferta' : 'ofertas'}${n !== all.length ? ` <small>(de ${all.length})</small>` : ''}</span>${np ? `<span class="pcount">${np} ${np === 1 ? 'pendente' : 'pendentes'}</span>` : ''}</button>`;
+        else if (!n) html += `<div class="vazio-filtro" aria-label="Nada neste horário com os filtros atuais"></div>`;
+        else html += `<button type="button" class="add${np ? ' has-prio' : ''}" data-open="${k}" aria-label="Escolher disciplina: ${DIAS[d]} ${hr}"><b>+</b><span>${n} ${n === 1 ? 'oferta' : 'ofertas'}</span>${np ? `<span class="pcount">${np} ${np === 1 ? 'pendente' : 'pendentes'}</span>` : ''}</button>`;
       }
       html += '</div>';
     }
@@ -808,8 +870,6 @@ function renderPanel() {
   }).join('');
   if (!list.length) html += `<p class="empty-list">${all.length ? 'Nenhuma oferta neste horário com os filtros atuais. Ajuste curso, turma, código ou busca.' : 'Não há disciplinas ofertadas neste horário.'}</p>`;
   if (done.length) html += `<p class="note">${done.length} ${done.length === 1 ? 'disciplina oculta' : 'disciplinas ocultas'} porque a carga horária já está completa na sua grade: ${[...new Set(done.map(a => a.c))].map(esc).join(', ')}.</p>`;
-  const filtradas = all.length - list.length - done.length;
-  if (list.length && filtradas > 0) html += `<p class="note">${filtradas} outras ofertas escondidas pelos filtros.</p>`;
   $('pList').innerHTML = html;
 }
 $('pList').addEventListener('click', e => {

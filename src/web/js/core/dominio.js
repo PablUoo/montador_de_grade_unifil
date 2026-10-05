@@ -17,10 +17,10 @@ const isPrio = c => PEND.has(c);
 const PRIO = '<span class="chip prio">PRIORIDADE · pendente</span>';
 
 function matches(a) {
-  if (filt.code && a.c !== filt.code) return false;
+  if (filt.codes.length && !filt.codes.includes(a.c)) return false;
   if (filt.onlyPend && !isPrio(a.c)) return false;
   if (filt.curso && !a.t.some(t => cursoOf(t).includes(filt.curso))) return false;
-  if (filt.turma && !a.t.includes(filt.turma)) return false;
+  if (filt.turmas.length && !a.t.some(t => filt.turmas.includes(t))) return false;
   if (filt.q) {
     const q = norm(filt.q);
     if (!norm(a.n + ' ' + a.c + ' ' + a.p).includes(q)) return false;

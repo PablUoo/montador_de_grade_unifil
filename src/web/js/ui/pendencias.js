@@ -26,7 +26,7 @@ function renderPend() {
     const inner = `<div class="top"><span class="code">${esc(p.c)}</span><span class="ch">${offered || p.ch ? chLabel(p.c) : ''}</span>${inGrade ? '<span class="done">✓ na grade</span>' : ''}</div>
       <div class="nm">${esc(nomeDe(p.c) || 'Disciplina sem nome na planilha')}</div><div class="st">${st}</div>${hint}`;
     return pres.length
-      ? `<button type="button" class="pitem${filt.code === p.c ? ' active' : ''}" data-code="${esc(p.c)}" title="Mostrar só ${esc(p.c)} na grade">${inner}</button>`
+      ? `<button type="button" class="pitem${filt.codes.length === 1 && filt.codes[0] === p.c ? ' active' : ''}" data-code="${esc(p.c)}" title="Mostrar só ${esc(p.c)} na grade">${inner}</button>`
       : `<div class="pitem${offered ? '' : ' off'}">${inner}</div>`;
   });
   $('pendList').innerHTML = items.join('');
@@ -34,7 +34,7 @@ function renderPend() {
 }
 $('pendList').addEventListener('click', e => {
   const b = e.target.closest('[data-code]'); if (!b) return;
-  setCode(filt.code === b.dataset.code ? '' : b.dataset.code);
+  setCode(filt.codes.length === 1 && filt.codes[0] === b.dataset.code ? '' : b.dataset.code);
   document.querySelector('.sheet').scrollIntoView({ behavior: 'smooth', block: 'start' });
 });
 
