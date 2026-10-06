@@ -16,7 +16,7 @@ $('segCurso').addEventListener('click', e => {
   renderAll();
 });
 $('q').addEventListener('input', e => { filt.q = e.target.value.trim(); renderAll(); });
-$('onlyPend').addEventListener('change', e => { filt.onlyPend = e.target.checked; renderAll(); });
+$('onlyPend').addEventListener('change', e => { filt.onlyPend = e.target.checked; renderAll(); renderDig(); });
 
 // selects com busca e múltipla escolha
 const valoresDe = sel => [...sel.selectedOptions].map(o => o.value).filter(Boolean);
@@ -101,5 +101,5 @@ $('btnFiltrosLimpar').onclick = () => {
   $('q').value = ''; $('onlyPend').checked = false;
   for (const [ts, el] of [[tsTurma, $('selTurma')], [tsCode, $('selCode')]]) { if (ts) ts.clear(true); else for (const o of el.options) o.selected = false; }
   for (const x of $('segCurso').children) x.setAttribute('aria-pressed', x.dataset.v === '');
-  renderAll(); $('q').focus();
+  renderAll(); renderDig(); $('q').focus();
 };
