@@ -504,10 +504,11 @@ function matches(a) {
   return true;
 }
 const offersAt = (d, h) => OFERTAS.filter(a => a.d === d && a.h === h);
-// other meetings of the same class: same code, sharing a turma (or both without turma and same professor)
+// outros encontros da mesma turma: mesmo código de disciplina e mesmo Classroom; sem Classroom, turma em comum (ou mesmo professor)
 function siblings(a) {
-  return OFERTAS.filter(b => b !== a && b.c === a.c &&
-    (a.t.length ? b.t.some(t => a.t.includes(t)) : b.p === a.p));
+  return OFERTAS.filter(b => b !== a && b.c === a.c && (a.k || b.k
+    ? a.k === b.k
+    : (a.t.length ? b.t.some(t => a.t.includes(t)) : b.p === a.p)));
 }
 const whenTxt = a => `${DIAS_CURTO[a.d]} ${HORAS[a.h].slice(0, 5)}`;
 
@@ -546,7 +547,14 @@ function carregarGradeSalva(b) {
   let s = lerJSON(CHAVE_GRADE(b));
   if (!s && b === 'B4-2026') s = lerJSON(CHAVE_LEGADA);
   state.sel = {}; state.dig = [];
-  for (const [k, id] of Object.entries(s?.sel || {})) if (BY_ID[id]) state.sel[k] = id;
+  for (const [k, id] of Object.entries(s?.sel || {})) {
+    if (BY_ID[id]) { state.sel[k] = id; continue; }
+    // grade salva antes de as ofertas serem separadas por Classroom: escolhe a turma do aluno, se houver
+    const cand = OFERTAS.filter(o => o.id.startsWith(id + '|'));
+    const tAluno = (state.aluno.turma || '').trim().toUpperCase();
+    const pick = cand.find(o => tAluno && o.t.some(t => t.toUpperCase() === tAluno)) || cand[0];
+    if (pick) state.sel[k] = pick.id;
+  }
   state.dig = (s?.dig || []).filter(id => DIGITAIS.some(x => x.id === id));
 }
 const save = () => {
@@ -591,18 +599,17 @@ function lerPlanilhaOfertas(buf) {
   const wb = XLSX.read(buf, { type: 'array' });
   const wsA = acharAba(wb, /^aulas/), wsD = acharAba(wb, /^(atividades )?digita/);
   if (!wsA) throw new Error('a planilha não tem a aba "Aulas"');
-  const ch = {}, cls = {};
+  const ch = {};
   const turmaDe = r => r.turma ? `${r.turma} ${r.curso}`.trim() : '';
-  // uma oferta = mesma disciplina, dia, horário, sala e professor (várias turmas podem dividir a aula)
+  // uma oferta = mesma disciplina, dia, horário, sala, professor e Classroom: cada turma (ou turmas que dividem o mesmo Classroom) é uma opção
   const grupos = new Map();
   for (const r of linhasDaAba(wsA)) {
     const c = r['codigo'], d = DIAS.indexOf(r['dia']), h = HORAS.indexOf(r['horario']);
     if (!c || d < 0 || h < 0) continue;
     if (+r['c.h.']) ch[c] = +r['c.h.'];
-    const id = [d, h, c, r.sala, r.professor].join('|');
-    if (!grupos.has(id)) grupos.set(id, { id, c, n: r.disciplina, d, h, s: r.sala, p: r.professor, tp: r.tipo, t: [] });
+    const id = [d, h, c, r.sala, r.professor, ...(r.classroom ? [r.classroom] : [])].join('|');
+    if (!grupos.has(id)) grupos.set(id, { id, c, n: r.disciplina, d, h, s: r.sala, p: r.professor, tp: r.tipo, k: r.classroom || '', t: [] });
     const t = turmaDe(r); if (t && !grupos.get(id).t.includes(t)) grupos.get(id).t.push(t);
-    if (r.classroom && !(cls[id] ||= []).some(x => x.code === r.classroom && x.t === t)) cls[id].push({ t, code: r.classroom });
   }
   const dig = new Map();
   for (const r of wsD ? linhasDaAba(wsD) : []) {
@@ -614,7 +621,7 @@ function lerPlanilhaOfertas(buf) {
   }
   const aulas = [...grupos.values()].map(a => ({ ...a, t: a.t.sort() }));
   if (!aulas.length) throw new Error('nenhuma aula encontrada na aba "Aulas"');
-  return { aulas, digitais: [...dig.values()], ch, cls };
+  return { aulas, digitais: [...dig.values()], ch };
 }
 // io/pendencias.js — importa as disciplinas pendentes de uma planilha Excel do usuário
 // Padrão de importação: uma coluna "Código" (ou "Código da disciplina") com os códigos, ex.: INAR230002.
@@ -658,17 +665,10 @@ function planilhaModeloPendencias() {
   const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Pendências');
   return new Blob([XLSX.write(wb, { bookType: 'xlsx', type: 'array' })]);
 }
-// io/classroom.js — códigos do Google Classroom de cada aula (vêm da coluna "Classroom" da planilha de ofertas)
-let CLASSROOM = {};   // id da oferta -> [{ t: 'E1/2023 ES', code: 'abc123' }]
-
-// códigos de uma oferta; com mais de um (um por turma), cada um vem com as turmas dele
-function classroomDe(a) {
-  const l = CLASSROOM[a?.id] || [];
-  const codigos = [...new Set(l.map(x => x.code))];
-  if (codigos.length <= 1) return codigos.map(code => ({ code, t: '' }));
-  return codigos.map(code => ({ code, t: l.filter(x => x.code === code).map(x => x.t).join(', ') }));
-}
-const classroomTexto = a => classroomDe(a).map(x => x.t ? `${x.code} (${x.t})` : x.code).join(' · ');
+// io/classroom.js — código do Google Classroom de cada oferta (coluna "Classroom" da planilha de ofertas)
+// Cada oferta é uma turma (ou turmas que dividem a mesma sala virtual), então tem no máximo um código: a.k
+const classroomDe = a => (a && a.k ? [{ code: a.k, t: '' }] : []);
+const classroomTexto = a => (a && a.k) || '';
 // ui/filtros.js — filtros de curso, turma(s), disciplina(s), busca e "só pendentes"; renderAll() redesenha a tela
 // Turma e Disciplina usam Tom Select (busca + seleção múltipla). Sem a biblioteca, os <select multiple> nativos continuam funcionando.
 const filt = { curso: '', turmas: [], codes: [], q: '', onlyPend: false };
@@ -1037,7 +1037,6 @@ function abrirOferta(bim, dados) {
   BIM = bim;
   gravarJSON(CHAVE_BIMESTRE, bim);
   if (!BIMESTRES.bimestres.includes(bim)) BIMESTRES.bimestres.push(bim);
-  CLASSROOM = dados.cls || {};
   carregarGradeSalva(bim);
   $('bimStatus').textContent = `${bim}: ${new Set(OFERTAS.map(a => a.c)).size} disciplinas presenciais em ${OFERTAS.length} ofertas e ${DIGITAIS.length} atividades digitais.`;
   document.body.classList.remove('sem-oferta');

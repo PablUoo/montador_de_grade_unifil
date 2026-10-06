@@ -28,18 +28,17 @@ function lerPlanilhaOfertas(buf) {
   const wb = XLSX.read(buf, { type: 'array' });
   const wsA = acharAba(wb, /^aulas/), wsD = acharAba(wb, /^(atividades )?digita/);
   if (!wsA) throw new Error('a planilha não tem a aba "Aulas"');
-  const ch = {}, cls = {};
+  const ch = {};
   const turmaDe = r => r.turma ? `${r.turma} ${r.curso}`.trim() : '';
-  // uma oferta = mesma disciplina, dia, horário, sala e professor (várias turmas podem dividir a aula)
+  // uma oferta = mesma disciplina, dia, horário, sala, professor e Classroom: cada turma (ou turmas que dividem o mesmo Classroom) é uma opção
   const grupos = new Map();
   for (const r of linhasDaAba(wsA)) {
     const c = r['codigo'], d = DIAS.indexOf(r['dia']), h = HORAS.indexOf(r['horario']);
     if (!c || d < 0 || h < 0) continue;
     if (+r['c.h.']) ch[c] = +r['c.h.'];
-    const id = [d, h, c, r.sala, r.professor].join('|');
-    if (!grupos.has(id)) grupos.set(id, { id, c, n: r.disciplina, d, h, s: r.sala, p: r.professor, tp: r.tipo, t: [] });
+    const id = [d, h, c, r.sala, r.professor, ...(r.classroom ? [r.classroom] : [])].join('|');
+    if (!grupos.has(id)) grupos.set(id, { id, c, n: r.disciplina, d, h, s: r.sala, p: r.professor, tp: r.tipo, k: r.classroom || '', t: [] });
     const t = turmaDe(r); if (t && !grupos.get(id).t.includes(t)) grupos.get(id).t.push(t);
-    if (r.classroom && !(cls[id] ||= []).some(x => x.code === r.classroom && x.t === t)) cls[id].push({ t, code: r.classroom });
   }
   const dig = new Map();
   for (const r of wsD ? linhasDaAba(wsD) : []) {
@@ -51,5 +50,5 @@ function lerPlanilhaOfertas(buf) {
   }
   const aulas = [...grupos.values()].map(a => ({ ...a, t: a.t.sort() }));
   if (!aulas.length) throw new Error('nenhuma aula encontrada na aba "Aulas"');
-  return { aulas, digitais: [...dig.values()], ch, cls };
+  return { aulas, digitais: [...dig.values()], ch };
 }

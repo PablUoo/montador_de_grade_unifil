@@ -28,10 +28,11 @@ function matches(a) {
   return true;
 }
 const offersAt = (d, h) => OFERTAS.filter(a => a.d === d && a.h === h);
-// other meetings of the same class: same code, sharing a turma (or both without turma and same professor)
+// outros encontros da mesma turma: mesmo código de disciplina e mesmo Classroom; sem Classroom, turma em comum (ou mesmo professor)
 function siblings(a) {
-  return OFERTAS.filter(b => b !== a && b.c === a.c &&
-    (a.t.length ? b.t.some(t => a.t.includes(t)) : b.p === a.p));
+  return OFERTAS.filter(b => b !== a && b.c === a.c && (a.k || b.k
+    ? a.k === b.k
+    : (a.t.length ? b.t.some(t => a.t.includes(t)) : b.p === a.p)));
 }
 const whenTxt = a => `${DIAS_CURTO[a.d]} ${HORAS[a.h].slice(0, 5)}`;
 

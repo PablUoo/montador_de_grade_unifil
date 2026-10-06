@@ -12,11 +12,17 @@ sub gravar { my ($f, @r) = @_; open my $o, '>:encoding(UTF-8)', $f or die $!; pr
 
 my @a = (['Código', 'Disciplina', 'Dia', 'Horário', 'Turma', 'Curso', 'Sala', 'Professor', 'Tipo', 'C.H.', 'Classroom']);
 my $n = 0;
-for (ler('f_aulas.tsv')) {
-  my ($c, $nm, $d, $hr, $t, $cu, undef, $s, $p, undef, $tp, $cls) = @$_;
-  next if $c eq 'FLEX';
+my @fa = grep { $_->[0] ne 'FLEX' } ler('f_aulas.tsv');
+# o PDF às vezes omite o Classroom num dos dias: na mesma página (grupo de turma) do PDF, a mesma disciplina, turma e professor usam o mesmo código nos outros dias
+my %codigo;
+for (@fa) { my ($c, $t, $cu, $p, $cls, $g) = @{$_}[0, 4, 5, 8, 11, 12]; $codigo{"$c|$t|$cu|$p|$g"}{$cls} = 1 if $cls }
+my $completados = 0;
+for (@fa) {
+  my ($c, $nm, $d, $hr, $t, $cu, undef, $s, $p, undef, $tp, $cls, $g) = @$_;
+  if (!$cls && (my $k = $codigo{"$c|$t|$cu|$p|$g"})) { my @u = keys %$k; if (@u == 1) { $cls = $u[0]; $completados++ } }
   push @a, [$c, $nm, $d, $hr, $t, $cu, $s, $p, $tp, $ch{$c} // '', $cls // '']; $n++;
 }
+print "$completados códigos do Classroom completados a partir de outro dia da mesma turma\n";
 my (%vis, @d) = ();
 @d = (['Código', 'Disciplina', 'Turma', 'Curso', 'Professor', 'C.H.']);
 for (ler('f_dig.tsv')) {

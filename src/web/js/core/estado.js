@@ -16,7 +16,14 @@ function carregarGradeSalva(b) {
   let s = lerJSON(CHAVE_GRADE(b));
   if (!s && b === 'B4-2026') s = lerJSON(CHAVE_LEGADA);
   state.sel = {}; state.dig = [];
-  for (const [k, id] of Object.entries(s?.sel || {})) if (BY_ID[id]) state.sel[k] = id;
+  for (const [k, id] of Object.entries(s?.sel || {})) {
+    if (BY_ID[id]) { state.sel[k] = id; continue; }
+    // grade salva antes de as ofertas serem separadas por Classroom: escolhe a turma do aluno, se houver
+    const cand = OFERTAS.filter(o => o.id.startsWith(id + '|'));
+    const tAluno = (state.aluno.turma || '').trim().toUpperCase();
+    const pick = cand.find(o => tAluno && o.t.some(t => t.toUpperCase() === tAluno)) || cand[0];
+    if (pick) state.sel[k] = pick.id;
+  }
   state.dig = (s?.dig || []).filter(id => DIGITAIS.some(x => x.id === id));
 }
 const save = () => {
