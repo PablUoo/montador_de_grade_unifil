@@ -35,8 +35,3 @@ etapa "Excel · $OFERTAS_DIR/$BIM.xlsx"
 mkdir -p "$RAIZ/$OFERTAS_DIR"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$(winpath "$PIPE/excel/escrever_oferta.ps1")" \
   -dir "$(winpath "$INTERIM")" -out "$(winpath "$RAIZ/$OFERTAS_DIR/$BIM.xlsx")"
-
-etapa "Local · assets/classroom-$BIM.xlsx (códigos do Classroom, fora do Git)"
-perl "$PIPE/transformacao/montar_classroom_local.pl"
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$(winpath "$PIPE/excel/escrever_oferta.ps1")" \
-  -dir "$(winpath "$INTERIM")" -out "$(winpath "$RAIZ/assets/classroom-$BIM.xlsx")" -abas "classroom.tsv=Classroom"

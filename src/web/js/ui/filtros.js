@@ -85,7 +85,7 @@ function setCode(c) {
   if (tsCode) tsCode.setValue(filt.codes, true); else for (const o of $('selCode').options) o.selected = filt.codes.includes(o.value);
   renderAll();
 }
-function renderAll() { renderGrid(); renderPend(); renderFiltroInfo(); renderClassroomBotoes(); if (!$('panel').hidden) renderPanel(); }
+function renderAll() { renderGrid(); renderPend(); renderFiltroInfo(); if (!$('panel').hidden) renderPanel(); }
 
 // quantas ofertas os filtros deixam aparecer + atalho para limpar
 const filtrosAtivos = () => [filt.q, filt.curso, filt.turmas.length, filt.codes.length, filt.onlyPend].filter(Boolean).length;

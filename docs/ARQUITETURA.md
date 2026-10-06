@@ -53,10 +53,9 @@ As páginas rodam em paralelo.
 
 **O que fica de fora da oferta pública:**
 - nome do representante de turma;
-- código do Google Classroom;
 - cabeçalho do PDF, que traz nomes de alunos.
 
-Os testes conferem isso.
+Os testes conferem isso. O código do Google Classroom de cada aula vai na coluna "Classroom" da oferta pública e aparece nos quadros, no PDF e no Excel.
 
 ## Site (`src/web` → `public/index.html`)
 

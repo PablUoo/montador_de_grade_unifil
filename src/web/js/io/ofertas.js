@@ -1,6 +1,6 @@
 // io/ofertas.js — lê as ofertas de um bimestre (jobs/ofertas/<bimestre>.xlsx) e o índice de bimestres
 // Formato da planilha (gerada por scripts/build-dados.sh):
-//   aba "Aulas":    Código | Disciplina | Dia | Horário | Turma | Curso | Sala | Professor | Tipo | C.H.
+//   aba "Aulas":    Código | Disciplina | Dia | Horário | Turma | Curso | Sala | Professor | Tipo | C.H. | Classroom
 //   aba "Digitais": Código | Disciplina | Turma | Curso | Professor | C.H.
 const OFERTAS_URL = 'jobs/ofertas/';
 
@@ -28,7 +28,7 @@ function lerPlanilhaOfertas(buf) {
   const wb = XLSX.read(buf, { type: 'array' });
   const wsA = acharAba(wb, /^aulas/), wsD = acharAba(wb, /^(atividades )?digita/);
   if (!wsA) throw new Error('a planilha não tem a aba "Aulas"');
-  const ch = {};
+  const ch = {}, cls = {};
   const turmaDe = r => r.turma ? `${r.turma} ${r.curso}`.trim() : '';
   // uma oferta = mesma disciplina, dia, horário, sala e professor (várias turmas podem dividir a aula)
   const grupos = new Map();
@@ -39,6 +39,7 @@ function lerPlanilhaOfertas(buf) {
     const id = [d, h, c, r.sala, r.professor].join('|');
     if (!grupos.has(id)) grupos.set(id, { id, c, n: r.disciplina, d, h, s: r.sala, p: r.professor, tp: r.tipo, t: [] });
     const t = turmaDe(r); if (t && !grupos.get(id).t.includes(t)) grupos.get(id).t.push(t);
+    if (r.classroom && !(cls[id] ||= []).some(x => x.code === r.classroom && x.t === t)) cls[id].push({ t, code: r.classroom });
   }
   const dig = new Map();
   for (const r of wsD ? linhasDaAba(wsD) : []) {
@@ -50,5 +51,5 @@ function lerPlanilhaOfertas(buf) {
   }
   const aulas = [...grupos.values()].map(a => ({ ...a, t: a.t.sort() }));
   if (!aulas.length) throw new Error('nenhuma aula encontrada na aba "Aulas"');
-  return { aulas, digitais: [...dig.values()], ch };
+  return { aulas, digitais: [...dig.values()], ch, cls };
 }

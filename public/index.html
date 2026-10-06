@@ -307,7 +307,6 @@ details.step > summary:focus-visible { outline: 2px solid var(--accent); outline
 .ts-acoes { display: flex; gap: 6px; padding: 6px 8px; border-bottom: 1px solid var(--line); background: var(--sheet); }
 .ts-acoes button { font: inherit; font-size: .78rem; font-weight: 600; padding: 4px 10px; border-radius: 6px; border: 1px solid var(--line); background: var(--bg); color: var(--fg); cursor: pointer; }
 .ts-acoes button:hover { border-color: var(--accent); color: var(--accent); }
-.cls-dica { color: var(--ok); } .cls-dica code { font-family: var(--f-mono); font-size: .8rem; }
 </style>
 </head>
 <body>
@@ -360,14 +359,8 @@ details.step > summary:focus-visible { outline: 2px solid var(--accent); outline
       <div class="step-tit">
         <h2 id="gradeTitulo">Monte a grade</h2>
         <p class="note">Clique no <b>+</b> de um horário para ver o que é ofertado. Cada horário vale 15h: disciplina de 30h ocupa 2 horários.</p>
-        <p class="note cls-dica" id="clsDica" hidden></p>
       </div>
-      <div class="step-acoes">
-        <button class="btn small" id="btnClsImport" type="button" title="Arquivo local assets/classroom-<bimestre>.xlsx gerado pelo build. Os códigos ficam só neste navegador.">Importar códigos do Classroom</button>
-        <button class="btn small danger" id="btnClsLimpar" type="button" hidden>Remover códigos</button>
-        <input type="file" id="clsIn" accept=".xlsx" hidden>
-        <button class="btn small danger" id="btnClear" type="button">Limpar grade</button>
-      </div>
+      <button class="btn small danger" id="btnClear" type="button">Limpar grade</button>
     </div>
 
     <div class="filtros" role="search" aria-label="Filtrar ofertas">
@@ -570,7 +563,7 @@ const slug = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^\w.-]+/g
 const arquivoNome = () => { const a = aluno(); return [a.nome, a.mat, a.turma, gradeNome()].filter(Boolean).map(slug).filter(Boolean).join('_') || 'grade'; };
 // io/ofertas.js — lê as ofertas de um bimestre (jobs/ofertas/<bimestre>.xlsx) e o índice de bimestres
 // Formato da planilha (gerada por scripts/build-dados.sh):
-//   aba "Aulas":    Código | Disciplina | Dia | Horário | Turma | Curso | Sala | Professor | Tipo | C.H.
+//   aba "Aulas":    Código | Disciplina | Dia | Horário | Turma | Curso | Sala | Professor | Tipo | C.H. | Classroom
 //   aba "Digitais": Código | Disciplina | Turma | Curso | Professor | C.H.
 const OFERTAS_URL = 'jobs/ofertas/';
 
@@ -598,7 +591,7 @@ function lerPlanilhaOfertas(buf) {
   const wb = XLSX.read(buf, { type: 'array' });
   const wsA = acharAba(wb, /^aulas/), wsD = acharAba(wb, /^(atividades )?digita/);
   if (!wsA) throw new Error('a planilha não tem a aba "Aulas"');
-  const ch = {};
+  const ch = {}, cls = {};
   const turmaDe = r => r.turma ? `${r.turma} ${r.curso}`.trim() : '';
   // uma oferta = mesma disciplina, dia, horário, sala e professor (várias turmas podem dividir a aula)
   const grupos = new Map();
@@ -609,6 +602,7 @@ function lerPlanilhaOfertas(buf) {
     const id = [d, h, c, r.sala, r.professor].join('|');
     if (!grupos.has(id)) grupos.set(id, { id, c, n: r.disciplina, d, h, s: r.sala, p: r.professor, tp: r.tipo, t: [] });
     const t = turmaDe(r); if (t && !grupos.get(id).t.includes(t)) grupos.get(id).t.push(t);
+    if (r.classroom && !(cls[id] ||= []).some(x => x.code === r.classroom && x.t === t)) cls[id].push({ t, code: r.classroom });
   }
   const dig = new Map();
   for (const r of wsD ? linhasDaAba(wsD) : []) {
@@ -620,7 +614,7 @@ function lerPlanilhaOfertas(buf) {
   }
   const aulas = [...grupos.values()].map(a => ({ ...a, t: a.t.sort() }));
   if (!aulas.length) throw new Error('nenhuma aula encontrada na aba "Aulas"');
-  return { aulas, digitais: [...dig.values()], ch };
+  return { aulas, digitais: [...dig.values()], ch, cls };
 }
 // io/pendencias.js — importa as disciplinas pendentes de uma planilha Excel do usuário
 // Padrão de importação: uma coluna "Código" (ou "Código da disciplina") com os códigos, ex.: INAR230002.
@@ -664,17 +658,10 @@ function planilhaModeloPendencias() {
   const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Pendências');
   return new Blob([XLSX.write(wb, { bookType: 'xlsx', type: 'array' })]);
 }
-// io/classroom.js — códigos do Google Classroom importados de um arquivo LOCAL (assets/classroom-<bimestre>.xlsx)
-// O site público não tem esses códigos (quem tem o código entra na turma); eles ficam só no navegador de quem importou.
-// Formato: Código | Dia | Horário | Sala | Professor | Turma | Curso | Classroom
-const CHAVE_CLASSROOM = b => `montador-grade:classroom:${b}`;
+// io/classroom.js — códigos do Google Classroom de cada aula (vêm da coluna "Classroom" da planilha de ofertas)
 let CLASSROOM = {};   // id da oferta -> [{ t: 'E1/2023 ES', code: 'abc123' }]
 
-function carregarClassroomSalvo() { const s = BIM && lerJSON(CHAVE_CLASSROOM(BIM)); CLASSROOM = s && typeof s === 'object' ? s : {}; }
-function salvarClassroom(mapa) { CLASSROOM = mapa; if (BIM) gravarJSON(CHAVE_CLASSROOM(BIM), mapa); }
-const temClassroom = () => Object.keys(CLASSROOM).length > 0;
-
-// códigos de uma oferta; com mais de um, cada um vem com a turma
+// códigos de uma oferta; com mais de um (um por turma), cada um vem com as turmas dele
 function classroomDe(a) {
   const l = CLASSROOM[a?.id] || [];
   const codigos = [...new Set(l.map(x => x.code))];
@@ -682,21 +669,6 @@ function classroomDe(a) {
   return codigos.map(code => ({ code, t: l.filter(x => x.code === code).map(x => x.t).join(', ') }));
 }
 const classroomTexto = a => classroomDe(a).map(x => x.t ? `${x.code} (${x.t})` : x.code).join(' · ');
-
-function lerPlanilhaClassroom(buf) {
-  const wb = XLSX.read(buf, { type: 'array' });
-  const ws = wb.Sheets[wb.SheetNames.find(n => /classroom/i.test(n)) || wb.SheetNames[0]];
-  const mapa = {}; let n = 0;
-  for (const r of linhasDaAba(ws)) {
-    const d = DIAS.indexOf(r.dia), h = HORAS.indexOf(r.horario), code = r.classroom;
-    if (!r.codigo || d < 0 || h < 0 || !code) continue;
-    const id = [d, h, r.codigo, r.sala, r.professor].join('|');
-    if (!BY_ID[id]) continue;   // aula que não existe na oferta aberta
-    (mapa[id] ||= []).push({ t: r.turma ? `${r.turma} ${r.curso}`.trim() : '', code }); n++;
-  }
-  if (!n) throw new Error('nenhum código de Classroom bate com as aulas deste bimestre (o arquivo é de outro bimestre?)');
-  return mapa;
-}
 // ui/filtros.js — filtros de curso, turma(s), disciplina(s), busca e "só pendentes"; renderAll() redesenha a tela
 // Turma e Disciplina usam Tom Select (busca + seleção múltipla). Sem a biblioteca, os <select multiple> nativos continuam funcionando.
 const filt = { curso: '', turmas: [], codes: [], q: '', onlyPend: false };
@@ -784,7 +756,7 @@ function setCode(c) {
   if (tsCode) tsCode.setValue(filt.codes, true); else for (const o of $('selCode').options) o.selected = filt.codes.includes(o.value);
   renderAll();
 }
-function renderAll() { renderGrid(); renderPend(); renderFiltroInfo(); renderClassroomBotoes(); if (!$('panel').hidden) renderPanel(); }
+function renderAll() { renderGrid(); renderPend(); renderFiltroInfo(); if (!$('panel').hidden) renderPanel(); }
 
 // quantas ofertas os filtros deixam aparecer + atalho para limpar
 const filtrosAtivos = () => [filt.q, filt.curso, filt.turmas.length, filt.codes.length, filt.onlyPend].filter(Boolean).length;
@@ -1047,33 +1019,6 @@ const CAMPOS_ALUNO = { alunoNome: 'nome', alunoMat: 'mat', alunoTurma: 'turma' }
 function preencherAluno() { for (const [id, k] of Object.entries(CAMPOS_ALUNO)) $(id).value = state.aluno[k] || ''; }
 for (const [id, k] of Object.entries(CAMPOS_ALUNO)) $(id).addEventListener('input', e => { state.aluno[k] = e.target.value; save(); });
 preencherAluno();
-// ui/classroom.js — importar/remover os códigos do Classroom (arquivo local) do bimestre aberto
-function renderClassroomBotoes() {
-  $('btnClsLimpar').hidden = !temClassroom();
-  $('btnClsImport').textContent = temClassroom() ? 'Trocar códigos do Classroom' : 'Importar códigos do Classroom';
-  // dica enquanto não há códigos: eles não vêm do site, só do arquivo local
-  $('clsDica').hidden = temClassroom() || !BIM;
-  $('clsDica').innerHTML = `Os códigos do Classroom não ficam no site público. Para vê-los nos quadros, clique em <b>Importar códigos do Classroom</b> e escolha o arquivo <code>assets/classroom-${esc(BIM)}.xlsx</code> do projeto.`;
-}
-$('btnClsImport').onclick = () => {
-  if (!BIM) { toast('Escolha o bimestre primeiro.'); return; }
-  $('clsIn').click();
-};
-$('clsIn').addEventListener('change', async e => {
-  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
-  try {
-    const mapa = lerPlanilhaClassroom(await f.arrayBuffer());
-    salvarClassroom(mapa); renderAll();
-    toast(`Códigos do Classroom importados para ${Object.keys(mapa).length} aulas de ${gradeNome()}`);
-  } catch (err) { toast('Não consegui importar: ' + err.message); }
-});
-let clsArmed = null;
-$('btnClsLimpar').onclick = () => {
-  const b = $('btnClsLimpar');
-  if (!clsArmed) { b.textContent = 'Clique de novo para remover'; clsArmed = setTimeout(() => { b.textContent = 'Remover códigos'; clsArmed = null; }, 3000); return; }
-  clearTimeout(clsArmed); clsArmed = null; b.textContent = 'Remover códigos';
-  salvarClassroom({}); renderAll(); toast('Códigos do Classroom removidos deste navegador');
-};
 // ui/bimestre.js — escolha do bimestre (B1-2026 … B4-2026) e carregamento da oferta correspondente
 let BIMESTRES = { bimestres: [], disponiveis: [] };
 
@@ -1092,7 +1037,8 @@ function abrirOferta(bim, dados) {
   BIM = bim;
   gravarJSON(CHAVE_BIMESTRE, bim);
   if (!BIMESTRES.bimestres.includes(bim)) BIMESTRES.bimestres.push(bim);
-  carregarGradeSalva(bim); carregarClassroomSalvo();
+  CLASSROOM = dados.cls || {};
+  carregarGradeSalva(bim);
   $('bimStatus').textContent = `${bim}: ${new Set(OFERTAS.map(a => a.c)).size} disciplinas presenciais em ${OFERTAS.length} ofertas e ${DIGITAIS.length} atividades digitais.`;
   document.body.classList.remove('sem-oferta');
   renderBimestres(); montarFiltros(); renderAll(); renderDig();

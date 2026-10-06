@@ -33,7 +33,7 @@ if (-f "$I/aulas.csv") {
   my %celulas = map { join('|', @{$_}[0, 2, 3, 4, 5]) => 1 } @campos;
   teste('nº de células = nº de códigos no PDF', keys(%celulas) == $noPdf - $titulosFlex, scalar(keys %celulas) . ' vs ' . ($noPdf - $titulosFlex));
   my ($cabA) = split /\n/, ler("$I/o_aulas.tsv");
-  teste('oferta pública tem só as colunas permitidas', ($cabA // '') eq join("\t", 'Código', 'Disciplina', 'Dia', 'Horário', 'Turma', 'Curso', 'Sala', 'Professor', 'Tipo', 'C.H.'), $cabA);
+  teste('oferta pública tem só as colunas permitidas', ($cabA // '') eq join("\t", 'Código', 'Disciplina', 'Dia', 'Horário', 'Turma', 'Curso', 'Sala', 'Professor', 'Tipo', 'C.H.', 'Classroom'), $cabA);
 } else { print "Extração: data/interim vazio (rode scripts/build-dados.sh para testar o pipeline)\n" }
 
 print "Ofertas publicadas (public/jobs/ofertas)\n";
@@ -46,17 +46,7 @@ for my $b (@{ $idx->{disponiveis} || [] }) {
   unzip($x => \$xml, Name => 'xl/sharedStrings.xml') or $xml = '';
   utf8::decode($xml);
   teste("$b.xlsx tem as colunas esperadas", $xml =~ /Código/ && $xml =~ /Horário/ && $xml =~ /Professor/);
-  teste("$b.xlsx não tem representantes nem Classroom", $xml !~ /Representante|Classroom|Turma [A-ZÁ-Ú][a-zá-ú]+ .* - E\d/);
-}
-
-# códigos do Classroom (arquivo local) não podem aparecer em nada que é publicado
-if (-f "$I/classroom.tsv") {
-  my @cods = map { (split /\t/)[7] } grep { length } split /\n/, ler("$I/classroom.tsv");
-  shift @cods;
-  my $pub = ler("$raiz/public/index.html");
-  for my $x (glob("$raiz/public/jobs/ofertas/*.xlsx")) { my $s = ''; unzip($x => \$s, Name => 'xl/sharedStrings.xml') or $s = ''; $pub .= $s }
-  my @vaz = grep { length($_) >= 6 && index($pub, $_) >= 0 } @cods;
-  teste('nenhum código do Classroom no site público', !@vaz, scalar(@vaz) . ' encontrados');
+  teste("$b.xlsx não tem representantes de turma", $xml !~ /Representante|Turma [A-ZÁ-Ú][a-zá-ú]+ .* - E\d/);
 }
 
 print "Site (public/)\n";

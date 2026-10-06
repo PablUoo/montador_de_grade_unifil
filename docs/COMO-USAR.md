@@ -11,7 +11,6 @@
    - A página completa os outros horários da mesma turma até fechar a C.H.
    - Com a C.H. completa, a disciplina some das opções dos outros horários.
 6. Marque as **atividades digitais** que vai fazer.
-7. (Opcional) Em "Importar códigos do Classroom", escolha o arquivo `assets/classroom-<bimestre>.xlsx` gerado pelo build. Os códigos aparecem nos quadros, no PDF e no Excel. Eles não ficam no site público, porque quem tem o código entra na turma; ficam só no seu navegador.
 
 ### Planilha de pendências
 
@@ -55,7 +54,7 @@ Os arquivos saem com o nome `Nome-do-Aluno_Matricula_Turma_B4-2026.pdf`.
 
 As ofertas vêm só do próprio projeto: a página lê os arquivos de `public/jobs/ofertas/`. Formato atual da planilha gerada (pode mudar quando houver um padrão oficial):
 
-- **Aulas:** Código, Disciplina, Dia (Segunda-feira … Sábado), Horário (`19:00 - 20:30` ou `20:45 - 22:15`), Turma (ex.: `E1/2026`), Curso (`CC`/`ES`), Sala, Professor, Tipo, C.H.
+- **Aulas:** Código, Disciplina, Dia (Segunda-feira … Sábado), Horário (`19:00 - 20:30` ou `20:45 - 22:15`), Turma (ex.: `E1/2026`), Curso (`CC`/`ES`), Sala, Professor, Tipo, C.H., Classroom (código do Google Classroom, aparece nos quadros, no PDF e no Excel)
 - **Digitais:** Código, Disciplina, Turma, Curso, Professor, C.H.
 
 ## Testar localmente

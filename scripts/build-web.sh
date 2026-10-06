@@ -7,7 +7,7 @@ MODULOS=(
   "$WEB/js/core/util.js" "$WEB/js/core/dominio.js" "$WEB/js/core/estado.js"
   "$WEB/js/io/ofertas.js" "$WEB/js/io/pendencias.js" "$WEB/js/io/classroom.js"
   "$WEB/js/ui/filtros.js" "$WEB/js/ui/pendencias.js" "$WEB/js/ui/grade.js" "$WEB/js/ui/seletor.js"
-  "$WEB/js/ui/resumo.js" "$WEB/js/ui/digitais.js" "$WEB/js/ui/acoes.js" "$WEB/js/ui/classroom.js" "$WEB/js/ui/bimestre.js"
+  "$WEB/js/ui/resumo.js" "$WEB/js/ui/digitais.js" "$WEB/js/ui/acoes.js" "$WEB/js/ui/bimestre.js"
   "$WEB/js/io/arquivos.js" "$WEB/js/main.js"
 )
 LIBS='<script src="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.3.1/js/tom-select.complete.min.js"></script>
