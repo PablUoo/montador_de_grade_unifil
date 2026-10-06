@@ -20,6 +20,7 @@ function renderGrid() {
           ${used > need ? `<span class="warnline">Excede a C.H.: ${used} horários para ${need}</span>` : ''}
           <div class="meta">${esc(a.p || 'Professor a definir')}</div>
           <div class="room">${a.s ? 'Sala ' + esc(a.s) : 'Sem sala'}</div>
+          ${classroomDe(a).map(x => `<div class="cls" title="Código do Google Classroom${x.t ? ' · ' + esc(x.t) : ''}">Classroom <code>${esc(x.code)}</code>${x.t ? ` <small>${esc(x.t)}</small>` : ''}</div>`).join('')}
           <div class="tur">${a.t.map(esc).join(' · ')}</div>
           <div class="acts"><button type="button" class="btn small" data-open="${k}">Trocar</button><button type="button" class="btn small danger" data-rm="${k}">Remover</button></div>
         </div>`;

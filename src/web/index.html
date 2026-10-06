@@ -63,7 +63,12 @@
         <h2 id="gradeTitulo">Monte a grade</h2>
         <p class="note">Clique no <b>+</b> de um horário para ver o que é ofertado. Cada horário vale 15h: disciplina de 30h ocupa 2 horários.</p>
       </div>
-      <button class="btn small danger" id="btnClear" type="button">Limpar grade</button>
+      <div class="step-acoes">
+        <button class="btn small" id="btnClsImport" type="button" title="Arquivo local assets/classroom-<bimestre>.xlsx gerado pelo build. Os códigos ficam só neste navegador.">Importar códigos do Classroom</button>
+        <button class="btn small danger" id="btnClsLimpar" type="button" hidden>Remover códigos</button>
+        <input type="file" id="clsIn" accept=".xlsx" hidden>
+        <button class="btn small danger" id="btnClear" type="button">Limpar grade</button>
+      </div>
     </div>
 
     <div class="filtros" role="search" aria-label="Filtrar ofertas">

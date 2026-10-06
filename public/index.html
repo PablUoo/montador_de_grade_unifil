@@ -290,6 +290,11 @@ details.step > summary:focus-visible { outline: 2px solid var(--accent); outline
 .ts-dropdown .selected { font-weight: 600; }
 .ts-dropdown .no-results { padding: 8px 10px; color: var(--muted); }
 .ts-dropdown .highlight { background: color-mix(in srgb, var(--accent) 30%, transparent); color: inherit; border-radius: 2px; }
+/* código do Google Classroom no cartão (vem do arquivo local importado) */
+.card .cls { font-size: .72rem; color: var(--muted); display: flex; gap: 4px; align-items: baseline; flex-wrap: wrap; justify-content: center; }
+.card .cls code { font-family: var(--f-mono); font-size: .76rem; font-weight: 600; color: var(--ok); background: var(--ok-soft); border-radius: 4px; padding: 0 5px; user-select: all; }
+.card .cls small { font-size: .66rem; }
+.step-acoes { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
 </style>
 </head>
 <body>
@@ -343,7 +348,12 @@ details.step > summary:focus-visible { outline: 2px solid var(--accent); outline
         <h2 id="gradeTitulo">Monte a grade</h2>
         <p class="note">Clique no <b>+</b> de um horário para ver o que é ofertado. Cada horário vale 15h: disciplina de 30h ocupa 2 horários.</p>
       </div>
-      <button class="btn small danger" id="btnClear" type="button">Limpar grade</button>
+      <div class="step-acoes">
+        <button class="btn small" id="btnClsImport" type="button" title="Arquivo local assets/classroom-<bimestre>.xlsx gerado pelo build. Os códigos ficam só neste navegador.">Importar códigos do Classroom</button>
+        <button class="btn small danger" id="btnClsLimpar" type="button" hidden>Remover códigos</button>
+        <input type="file" id="clsIn" accept=".xlsx" hidden>
+        <button class="btn small danger" id="btnClear" type="button">Limpar grade</button>
+      </div>
     </div>
 
     <div class="filtros" role="search" aria-label="Filtrar ofertas">
@@ -640,6 +650,39 @@ function planilhaModeloPendencias() {
   const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Pendências');
   return new Blob([XLSX.write(wb, { bookType: 'xlsx', type: 'array' })]);
 }
+// io/classroom.js — códigos do Google Classroom importados de um arquivo LOCAL (assets/classroom-<bimestre>.xlsx)
+// O site público não tem esses códigos (quem tem o código entra na turma); eles ficam só no navegador de quem importou.
+// Formato: Código | Dia | Horário | Sala | Professor | Turma | Curso | Classroom
+const CHAVE_CLASSROOM = b => `montador-grade:classroom:${b}`;
+let CLASSROOM = {};   // id da oferta -> [{ t: 'E1/2023 ES', code: 'abc123' }]
+
+function carregarClassroomSalvo() { const s = BIM && lerJSON(CHAVE_CLASSROOM(BIM)); CLASSROOM = s && typeof s === 'object' ? s : {}; }
+function salvarClassroom(mapa) { CLASSROOM = mapa; if (BIM) gravarJSON(CHAVE_CLASSROOM(BIM), mapa); }
+const temClassroom = () => Object.keys(CLASSROOM).length > 0;
+
+// códigos de uma oferta; com mais de um, cada um vem com a turma
+function classroomDe(a) {
+  const l = CLASSROOM[a?.id] || [];
+  const codigos = [...new Set(l.map(x => x.code))];
+  if (codigos.length <= 1) return codigos.map(code => ({ code, t: '' }));
+  return codigos.map(code => ({ code, t: l.filter(x => x.code === code).map(x => x.t).join(', ') }));
+}
+const classroomTexto = a => classroomDe(a).map(x => x.t ? `${x.code} (${x.t})` : x.code).join(' · ');
+
+function lerPlanilhaClassroom(buf) {
+  const wb = XLSX.read(buf, { type: 'array' });
+  const ws = wb.Sheets[wb.SheetNames.find(n => /classroom/i.test(n)) || wb.SheetNames[0]];
+  const mapa = {}; let n = 0;
+  for (const r of linhasDaAba(ws)) {
+    const d = DIAS.indexOf(r.dia), h = HORAS.indexOf(r.horario), code = r.classroom;
+    if (!r.codigo || d < 0 || h < 0 || !code) continue;
+    const id = [d, h, r.codigo, r.sala, r.professor].join('|');
+    if (!BY_ID[id]) continue;   // aula que não existe na oferta aberta
+    (mapa[id] ||= []).push({ t: r.turma ? `${r.turma} ${r.curso}`.trim() : '', code }); n++;
+  }
+  if (!n) throw new Error('nenhum código de Classroom bate com as aulas deste bimestre (o arquivo é de outro bimestre?)');
+  return mapa;
+}
 // ui/filtros.js — filtros de curso, turma(s), disciplina(s), busca e "só pendentes"; renderAll() redesenha a tela
 // Turma e Disciplina usam Tom Select (busca + seleção múltipla). Sem a biblioteca, os <select multiple> nativos continuam funcionando.
 const filt = { curso: '', turmas: [], codes: [], q: '', onlyPend: false };
@@ -713,7 +756,7 @@ function setCode(c) {
   if (tsCode) tsCode.setValue(filt.codes, true); else for (const o of $('selCode').options) o.selected = filt.codes.includes(o.value);
   renderAll();
 }
-function renderAll() { renderGrid(); renderPend(); renderFiltroInfo(); if (!$('panel').hidden) renderPanel(); }
+function renderAll() { renderGrid(); renderPend(); renderFiltroInfo(); renderClassroomBotoes(); if (!$('panel').hidden) renderPanel(); }
 
 // quantas ofertas os filtros deixam aparecer + atalho para limpar
 const filtrosAtivos = () => [filt.q, filt.curso, filt.turmas.length, filt.codes.length, filt.onlyPend].filter(Boolean).length;
@@ -820,6 +863,7 @@ function renderGrid() {
           ${used > need ? `<span class="warnline">Excede a C.H.: ${used} horários para ${need}</span>` : ''}
           <div class="meta">${esc(a.p || 'Professor a definir')}</div>
           <div class="room">${a.s ? 'Sala ' + esc(a.s) : 'Sem sala'}</div>
+          ${classroomDe(a).map(x => `<div class="cls" title="Código do Google Classroom${x.t ? ' · ' + esc(x.t) : ''}">Classroom <code>${esc(x.code)}</code>${x.t ? ` <small>${esc(x.t)}</small>` : ''}</div>`).join('')}
           <div class="tur">${a.t.map(esc).join(' · ')}</div>
           <div class="acts"><button type="button" class="btn small" data-open="${k}">Trocar</button><button type="button" class="btn small danger" data-rm="${k}">Remover</button></div>
         </div>`;
@@ -863,7 +907,7 @@ function renderPanel() {
     return `<button type="button" class="opt${isPrio(a.c) ? ' is-prio' : ''}${state.sel[cur] === a.id ? ' current' : ''}" data-pick="${esc(a.id)}">
       <div class="top"><span class="nm">${esc(a.n)}</span><span class="code">${esc(a.c)}</span></div>
       <div class="meta"><b>C.H. ${chLabel(a.c)}</b> = ${need} ${need === 1 ? 'horário' : 'horários'} na semana${used ? ` · você já tem ${used} de ${need}` : ''}</div>
-      <div class="meta">${esc(a.p || 'Professor a definir')} · ${a.s ? 'Sala ' + esc(a.s) : 'sem sala'}${a.tp && a.tp !== 'CORE' ? ' · ' + esc(a.tp) : ''}</div>
+      <div class="meta">${esc(a.p || 'Professor a definir')} · ${a.s ? 'Sala ' + esc(a.s) : 'sem sala'}${a.tp && a.tp !== 'CORE' ? ' · ' + esc(a.tp) : ''}${classroomDe(a).length ? ' · Classroom ' + esc(classroomTexto(a)) : ''}</div>
       <div class="chips">${isPrio(a.c) ? PRIO : ''}${a.t.map(chip).join('')}${chosenCodes.has(a.c) && state.sel[cur] !== a.id ? '<span class="chip in">já está na sua grade</span>' : ''}</div>
       ${sib.length ? `<div class="also">Também em: ${sib.map(b => `${whenTxt(b)}${b.s ? ' (sala ' + esc(b.s) + ')' : ''}`).join(', ')}</div>` : ''}
     </button>`;
@@ -975,6 +1019,30 @@ const CAMPOS_ALUNO = { alunoNome: 'nome', alunoMat: 'mat', alunoTurma: 'turma' }
 function preencherAluno() { for (const [id, k] of Object.entries(CAMPOS_ALUNO)) $(id).value = state.aluno[k] || ''; }
 for (const [id, k] of Object.entries(CAMPOS_ALUNO)) $(id).addEventListener('input', e => { state.aluno[k] = e.target.value; save(); });
 preencherAluno();
+// ui/classroom.js — importar/remover os códigos do Classroom (arquivo local) do bimestre aberto
+function renderClassroomBotoes() {
+  $('btnClsLimpar').hidden = !temClassroom();
+  $('btnClsImport').textContent = temClassroom() ? 'Trocar códigos do Classroom' : 'Importar códigos do Classroom';
+}
+$('btnClsImport').onclick = () => {
+  if (!BIM) { toast('Escolha o bimestre primeiro.'); return; }
+  $('clsIn').click();
+};
+$('clsIn').addEventListener('change', async e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  try {
+    const mapa = lerPlanilhaClassroom(await f.arrayBuffer());
+    salvarClassroom(mapa); renderAll();
+    toast(`Códigos do Classroom importados para ${Object.keys(mapa).length} aulas de ${gradeNome()}`);
+  } catch (err) { toast('Não consegui importar: ' + err.message); }
+});
+let clsArmed = null;
+$('btnClsLimpar').onclick = () => {
+  const b = $('btnClsLimpar');
+  if (!clsArmed) { b.textContent = 'Clique de novo para remover'; clsArmed = setTimeout(() => { b.textContent = 'Remover códigos'; clsArmed = null; }, 3000); return; }
+  clearTimeout(clsArmed); clsArmed = null; b.textContent = 'Remover códigos';
+  salvarClassroom({}); renderAll(); toast('Códigos do Classroom removidos deste navegador');
+};
 // ui/bimestre.js — escolha do bimestre (B1-2026 … B4-2026) e carregamento da oferta correspondente
 let BIMESTRES = { bimestres: [], disponiveis: [] };
 
@@ -993,7 +1061,7 @@ function abrirOferta(bim, dados) {
   BIM = bim;
   gravarJSON(CHAVE_BIMESTRE, bim);
   if (!BIMESTRES.bimestres.includes(bim)) BIMESTRES.bimestres.push(bim);
-  carregarGradeSalva(bim);
+  carregarGradeSalva(bim); carregarClassroomSalvo();
   $('bimStatus').textContent = `${bim}: ${new Set(OFERTAS.map(a => a.c)).size} disciplinas presenciais em ${OFERTAS.length} ofertas e ${DIGITAIS.length} atividades digitais.`;
   document.body.classList.remove('sem-oferta');
   renderBimestres(); montarFiltros(); renderAll(); renderDig();
@@ -1069,7 +1137,7 @@ const needOne = () => { if (!Object.keys(state.sel).length && !state.dig.length)
 function buildWorkbook() {
   const XL = window.XLSX;
   const wb = XL.utils.book_new();
-  const cellTxt = a => a ? `${isPrio(a.c) ? '★ PENDENTE\n' : ''}${a.n}\n${a.c} · ${chLabel(a.c)}\n${a.p || ''}\nSala ${a.s || '-'}\n${a.t.join(', ')}` : '';
+  const cellTxt = a => a ? `${isPrio(a.c) ? '★ PENDENTE\n' : ''}${a.n}\n${a.c} · ${chLabel(a.c)}\n${a.p || ''}\nSala ${a.s || '-'}${classroomTexto(a) ? '\nClassroom ' + classroomTexto(a) : ''}\n${a.t.join(', ')}` : '';
   const a0 = aluno();
   const info = [['Grade', gradeNome()], ['Aluno', a0.nome], ['Matrícula', a0.mat], ['Turma', a0.turma], []];
   const g = [...info, ['Horário', ...DIAS]];
@@ -1083,11 +1151,11 @@ function buildWorkbook() {
   ws1['!merges'] = [{ s: { r: info.length + 2, c: 0 }, e: { r: info.length + 2, c: 6 } }];
   XL.utils.book_append_sheet(wb, ws1, 'Grade');
 
-  const l = [['Dia', 'Horário', 'Código', 'Disciplina', 'C.H.', 'Professor', 'Sala', 'Turmas', 'Prioridade (pendente)']];
-  chosenList().forEach(({ d, h, a }) => l.push([DIAS[d], HORAS[h], a.c, a.n, chLabel(a.c), a.p, a.s, a.t.join(', '), isPrio(a.c) ? 'SIM' : '']));
+  const l = [['Dia', 'Horário', 'Código', 'Disciplina', 'C.H.', 'Professor', 'Sala', 'Turmas', 'Classroom', 'Prioridade (pendente)']];
+  chosenList().forEach(({ d, h, a }) => l.push([DIAS[d], HORAS[h], a.c, a.n, chLabel(a.c), a.p, a.s, a.t.join(', '), classroomTexto(a), isPrio(a.c) ? 'SIM' : '']));
   const ws2 = XL.utils.aoa_to_sheet(l);
-  ws2['!cols'] = [{ wch: 14 }, { wch: 14 }, { wch: 12 }, { wch: 60 }, { wch: 14 }, { wch: 30 }, { wch: 8 }, { wch: 30 }, { wch: 12 }];
-  ws2['!autofilter'] = { ref: `A1:I${l.length}` };
+  ws2['!cols'] = [{ wch: 14 }, { wch: 14 }, { wch: 12 }, { wch: 60 }, { wch: 14 }, { wch: 30 }, { wch: 8 }, { wch: 30 }, { wch: 22 }, { wch: 12 }];
+  ws2['!autofilter'] = { ref: `A1:J${l.length}` };
   XL.utils.book_append_sheet(wb, ws2, 'Lista');
 
   const dg = [['Código', 'Disciplina', 'Professor', 'Turmas', 'Prioridade (pendente)']];
@@ -1160,6 +1228,7 @@ $('btnPdf').onclick = e => busy(e.currentTarget, async () => {
     linhas(`${chLabel(a.c)} · ${SLOT_H}h aqui (${order}/${slotsNeeded(a.c)})`, 'helvetica', 'normal', 6.5, [110, 104, 97], 8.5);
     linhas(a.p || 'Professor a definir', 'helvetica', 'normal', 7, [110, 104, 97], 8.5);
     ty += 2; linhas(a.s ? `Sala ${a.s}` : 'Sem sala', 'courier', 'bold', 8.5, [30, 26, 22], 11);
+    if (classroomDe(a).length) linhas('Classroom ' + classroomTexto(a), 'courier', 'normal', 6.5, [110, 104, 97], 8);
     linhas(a.t.join(' · '), 'helvetica', 'normal', 6.5, [110, 104, 97], 8);
     doc.setTextColor(0); doc.setLineWidth(.6);
   };

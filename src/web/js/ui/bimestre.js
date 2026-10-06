@@ -16,7 +16,7 @@ function abrirOferta(bim, dados) {
   BIM = bim;
   gravarJSON(CHAVE_BIMESTRE, bim);
   if (!BIMESTRES.bimestres.includes(bim)) BIMESTRES.bimestres.push(bim);
-  carregarGradeSalva(bim);
+  carregarGradeSalva(bim); carregarClassroomSalvo();
   $('bimStatus').textContent = `${bim}: ${new Set(OFERTAS.map(a => a.c)).size} disciplinas presenciais em ${OFERTAS.length} ofertas e ${DIGITAIS.length} atividades digitais.`;
   document.body.classList.remove('sem-oferta');
   renderBimestres(); montarFiltros(); renderAll(); renderDig();

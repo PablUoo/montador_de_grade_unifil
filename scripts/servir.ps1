@@ -13,6 +13,7 @@ try {
     $rel = [Uri]::UnescapeDataString($ctx.Request.Url.AbsolutePath.TrimStart('/'))
     if (-not $rel) { $rel = 'index.html' }
     $arq = [IO.Path]::GetFullPath((Join-Path $raiz $rel))
+    if (Test-Path $arq -PathType Container) { $arq = Join-Path $arq 'index.html' }
     if ($arq.StartsWith($raiz) -and (Test-Path $arq -PathType Leaf)) {
       $bytes = [IO.File]::ReadAllBytes($arq)
       $tipo = $tipos[[IO.Path]::GetExtension($arq).ToLower()]

@@ -11,6 +11,7 @@
    - A página completa os outros horários da mesma turma até fechar a C.H.
    - Com a C.H. completa, a disciplina some das opções dos outros horários.
 6. Marque as **atividades digitais** que vai fazer.
+7. (Opcional) Em "Importar códigos do Classroom", escolha o arquivo `assets/classroom-<bimestre>.xlsx` gerado pelo build. Os códigos aparecem nos quadros, no PDF e no Excel. Eles não ficam no site público, porque quem tem o código entra na turma; ficam só no seu navegador.
 
 ### Planilha de pendências
 

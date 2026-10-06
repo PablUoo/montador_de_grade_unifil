@@ -19,7 +19,7 @@ function renderPanel() {
     return `<button type="button" class="opt${isPrio(a.c) ? ' is-prio' : ''}${state.sel[cur] === a.id ? ' current' : ''}" data-pick="${esc(a.id)}">
       <div class="top"><span class="nm">${esc(a.n)}</span><span class="code">${esc(a.c)}</span></div>
       <div class="meta"><b>C.H. ${chLabel(a.c)}</b> = ${need} ${need === 1 ? 'horário' : 'horários'} na semana${used ? ` · você já tem ${used} de ${need}` : ''}</div>
-      <div class="meta">${esc(a.p || 'Professor a definir')} · ${a.s ? 'Sala ' + esc(a.s) : 'sem sala'}${a.tp && a.tp !== 'CORE' ? ' · ' + esc(a.tp) : ''}</div>
+      <div class="meta">${esc(a.p || 'Professor a definir')} · ${a.s ? 'Sala ' + esc(a.s) : 'sem sala'}${a.tp && a.tp !== 'CORE' ? ' · ' + esc(a.tp) : ''}${classroomDe(a).length ? ' · Classroom ' + esc(classroomTexto(a)) : ''}</div>
       <div class="chips">${isPrio(a.c) ? PRIO : ''}${a.t.map(chip).join('')}${chosenCodes.has(a.c) && state.sel[cur] !== a.id ? '<span class="chip in">já está na sua grade</span>' : ''}</div>
       ${sib.length ? `<div class="also">Também em: ${sib.map(b => `${whenTxt(b)}${b.s ? ' (sala ' + esc(b.s) + ')' : ''}`).join(', ')}</div>` : ''}
     </button>`;

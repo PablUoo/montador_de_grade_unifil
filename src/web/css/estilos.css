@@ -279,3 +279,8 @@ details.step > summary:focus-visible { outline: 2px solid var(--accent); outline
 .ts-dropdown .selected { font-weight: 600; }
 .ts-dropdown .no-results { padding: 8px 10px; color: var(--muted); }
 .ts-dropdown .highlight { background: color-mix(in srgb, var(--accent) 30%, transparent); color: inherit; border-radius: 2px; }
+/* código do Google Classroom no cartão (vem do arquivo local importado) */
+.card .cls { font-size: .72rem; color: var(--muted); display: flex; gap: 4px; align-items: baseline; flex-wrap: wrap; justify-content: center; }
+.card .cls code { font-family: var(--f-mono); font-size: .76rem; font-weight: 600; color: var(--ok); background: var(--ok-soft); border-radius: 4px; padding: 0 5px; user-select: all; }
+.card .cls small { font-size: .66rem; }
+.step-acoes { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }

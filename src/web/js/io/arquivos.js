@@ -45,7 +45,7 @@ const needOne = () => { if (!Object.keys(state.sel).length && !state.dig.length)
 function buildWorkbook() {
   const XL = window.XLSX;
   const wb = XL.utils.book_new();
-  const cellTxt = a => a ? `${isPrio(a.c) ? '★ PENDENTE\n' : ''}${a.n}\n${a.c} · ${chLabel(a.c)}\n${a.p || ''}\nSala ${a.s || '-'}\n${a.t.join(', ')}` : '';
+  const cellTxt = a => a ? `${isPrio(a.c) ? '★ PENDENTE\n' : ''}${a.n}\n${a.c} · ${chLabel(a.c)}\n${a.p || ''}\nSala ${a.s || '-'}${classroomTexto(a) ? '\nClassroom ' + classroomTexto(a) : ''}\n${a.t.join(', ')}` : '';
   const a0 = aluno();
   const info = [['Grade', gradeNome()], ['Aluno', a0.nome], ['Matrícula', a0.mat], ['Turma', a0.turma], []];
   const g = [...info, ['Horário', ...DIAS]];
@@ -59,11 +59,11 @@ function buildWorkbook() {
   ws1['!merges'] = [{ s: { r: info.length + 2, c: 0 }, e: { r: info.length + 2, c: 6 } }];
   XL.utils.book_append_sheet(wb, ws1, 'Grade');
 
-  const l = [['Dia', 'Horário', 'Código', 'Disciplina', 'C.H.', 'Professor', 'Sala', 'Turmas', 'Prioridade (pendente)']];
-  chosenList().forEach(({ d, h, a }) => l.push([DIAS[d], HORAS[h], a.c, a.n, chLabel(a.c), a.p, a.s, a.t.join(', '), isPrio(a.c) ? 'SIM' : '']));
+  const l = [['Dia', 'Horário', 'Código', 'Disciplina', 'C.H.', 'Professor', 'Sala', 'Turmas', 'Classroom', 'Prioridade (pendente)']];
+  chosenList().forEach(({ d, h, a }) => l.push([DIAS[d], HORAS[h], a.c, a.n, chLabel(a.c), a.p, a.s, a.t.join(', '), classroomTexto(a), isPrio(a.c) ? 'SIM' : '']));
   const ws2 = XL.utils.aoa_to_sheet(l);
-  ws2['!cols'] = [{ wch: 14 }, { wch: 14 }, { wch: 12 }, { wch: 60 }, { wch: 14 }, { wch: 30 }, { wch: 8 }, { wch: 30 }, { wch: 12 }];
-  ws2['!autofilter'] = { ref: `A1:I${l.length}` };
+  ws2['!cols'] = [{ wch: 14 }, { wch: 14 }, { wch: 12 }, { wch: 60 }, { wch: 14 }, { wch: 30 }, { wch: 8 }, { wch: 30 }, { wch: 22 }, { wch: 12 }];
+  ws2['!autofilter'] = { ref: `A1:J${l.length}` };
   XL.utils.book_append_sheet(wb, ws2, 'Lista');
 
   const dg = [['Código', 'Disciplina', 'Professor', 'Turmas', 'Prioridade (pendente)']];
@@ -136,6 +136,7 @@ $('btnPdf').onclick = e => busy(e.currentTarget, async () => {
     linhas(`${chLabel(a.c)} · ${SLOT_H}h aqui (${order}/${slotsNeeded(a.c)})`, 'helvetica', 'normal', 6.5, [110, 104, 97], 8.5);
     linhas(a.p || 'Professor a definir', 'helvetica', 'normal', 7, [110, 104, 97], 8.5);
     ty += 2; linhas(a.s ? `Sala ${a.s}` : 'Sem sala', 'courier', 'bold', 8.5, [30, 26, 22], 11);
+    if (classroomDe(a).length) linhas('Classroom ' + classroomTexto(a), 'courier', 'normal', 6.5, [110, 104, 97], 8);
     linhas(a.t.join(' · '), 'helvetica', 'normal', 6.5, [110, 104, 97], 8);
     doc.setTextColor(0); doc.setLineWidth(.6);
   };

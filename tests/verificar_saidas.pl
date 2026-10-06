@@ -49,6 +49,16 @@ for my $b (@{ $idx->{disponiveis} || [] }) {
   teste("$b.xlsx não tem representantes nem Classroom", $xml !~ /Representante|Classroom|Turma [A-ZÁ-Ú][a-zá-ú]+ .* - E\d/);
 }
 
+# códigos do Classroom (arquivo local) não podem aparecer em nada que é publicado
+if (-f "$I/classroom.tsv") {
+  my @cods = map { (split /\t/)[7] } grep { length } split /\n/, ler("$I/classroom.tsv");
+  shift @cods;
+  my $pub = ler("$raiz/public/index.html");
+  for my $x (glob("$raiz/public/jobs/ofertas/*.xlsx")) { my $s = ''; unzip($x => \$s, Name => 'xl/sharedStrings.xml') or $s = ''; $pub .= $s }
+  my @vaz = grep { length($_) >= 6 && index($pub, $_) >= 0 } @cods;
+  teste('nenhum código do Classroom no site público', !@vaz, scalar(@vaz) . ' encontrados');
+}
+
 print "Site (public/)\n";
 my $html = ler("$raiz/public/index.html");
 teste('index.html existe e começa com <!doctype html>', $html =~ /^<!doctype html>/i);
