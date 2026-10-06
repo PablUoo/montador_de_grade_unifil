@@ -24,7 +24,7 @@ function criarMulti(id, placeholder, aoMudar, itemCurto) {
   const el = $(id);
   el.addEventListener('change', () => aoMudar(el.tomselect ? el.tomselect.getValue() : valoresDe(el)));
   if (!window.TomSelect) return null;
-  return new TomSelect(el, {
+  const ts = new TomSelect(el, {
     plugins: { remove_button: { title: 'Remover' }, clear_button: { title: 'Limpar' }, checkbox_options: {} },
     placeholder, maxOptions: null, hidePlaceholder: true, closeAfterSelect: false,
     searchField: ['text', 'value'], lockOptgroupOrder: true,
@@ -34,6 +34,20 @@ function criarMulti(id, placeholder, aoMudar, itemCurto) {
       ...(itemCurto ? { item: (d, e) => `<div title="${e(d.text.replace(/^★ /, ''))}">${e(d.value)}</div>` } : {}),
     },
   });
+  // topo da lista: "Selecionar todos" (respeita o que foi digitado na busca) e "Limpar"
+  const barra = document.createElement('div');
+  barra.className = 'ts-acoes';
+  barra.innerHTML = '<button type="button" data-a="todos">Selecionar todos</button><button type="button" data-a="nenhum">Limpar</button>';
+  barra.addEventListener('mousedown', e => e.preventDefault());   // não fecha a lista nem perde o foco
+  barra.addEventListener('click', e => {
+    const a = e.target.closest('button')?.dataset.a; if (!a) return;
+    if (a === 'nenhum') { ts.clear(); return; }
+    const visiveis = ts.lastQuery ? ts.currentResults.items.map(i => i.id) : Object.keys(ts.options);
+    ts.setValue([...new Set([...ts.getValue(), ...visiveis])]);
+    ts.refreshOptions(false);
+  });
+  ts.dropdown.prepend(barra);
+  return ts;
 }
 const tsTurma = criarMulti('selTurma', 'Todas as turmas', v => { filt.turmas = v; renderAll(); });
 const tsCode = criarMulti('selCode', 'Todas as disciplinas', v => { filt.codes = v; renderAll(); }, true);

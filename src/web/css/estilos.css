@@ -284,3 +284,16 @@ details.step > summary:focus-visible { outline: 2px solid var(--accent); outline
 .card .cls code { font-family: var(--f-mono); font-size: .76rem; font-weight: 600; color: var(--ok); background: var(--ok-soft); border-radius: 4px; padding: 0 5px; user-select: all; }
 .card .cls small { font-size: .66rem; }
 .step-acoes { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+/* multiselect: escolhas numa linha só, com rolagem horizontal */
+.f-campo .ts-wrapper.multi .ts-control { flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; white-space: nowrap; scrollbar-width: thin; }
+.f-campo .ts-wrapper.multi .ts-control > .item { flex: none; max-width: none; }
+.f-campo .ts-control > input { flex: 1 0 7rem; }
+/* lista de opções: cada opção numa linha, com rolagem horizontal quando o nome é longo */
+.ts-dropdown .ts-dropdown-content { overflow-x: auto; }
+.ts-dropdown .option, .ts-dropdown .optgroup-header { white-space: nowrap; }
+.ts-dropdown .optgroup { min-width: max-content; }
+/* topo da lista: selecionar todos / limpar */
+.ts-acoes { display: flex; gap: 6px; padding: 6px 8px; border-bottom: 1px solid var(--line); background: var(--sheet); }
+.ts-acoes button { font: inherit; font-size: .78rem; font-weight: 600; padding: 4px 10px; border-radius: 6px; border: 1px solid var(--line); background: var(--bg); color: var(--fg); cursor: pointer; }
+.ts-acoes button:hover { border-color: var(--accent); color: var(--accent); }
+.cls-dica { color: var(--ok); } .cls-dica code { font-family: var(--f-mono); font-size: .8rem; }

@@ -295,6 +295,19 @@ details.step > summary:focus-visible { outline: 2px solid var(--accent); outline
 .card .cls code { font-family: var(--f-mono); font-size: .76rem; font-weight: 600; color: var(--ok); background: var(--ok-soft); border-radius: 4px; padding: 0 5px; user-select: all; }
 .card .cls small { font-size: .66rem; }
 .step-acoes { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+/* multiselect: escolhas numa linha só, com rolagem horizontal */
+.f-campo .ts-wrapper.multi .ts-control { flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; white-space: nowrap; scrollbar-width: thin; }
+.f-campo .ts-wrapper.multi .ts-control > .item { flex: none; max-width: none; }
+.f-campo .ts-control > input { flex: 1 0 7rem; }
+/* lista de opções: cada opção numa linha, com rolagem horizontal quando o nome é longo */
+.ts-dropdown .ts-dropdown-content { overflow-x: auto; }
+.ts-dropdown .option, .ts-dropdown .optgroup-header { white-space: nowrap; }
+.ts-dropdown .optgroup { min-width: max-content; }
+/* topo da lista: selecionar todos / limpar */
+.ts-acoes { display: flex; gap: 6px; padding: 6px 8px; border-bottom: 1px solid var(--line); background: var(--sheet); }
+.ts-acoes button { font: inherit; font-size: .78rem; font-weight: 600; padding: 4px 10px; border-radius: 6px; border: 1px solid var(--line); background: var(--bg); color: var(--fg); cursor: pointer; }
+.ts-acoes button:hover { border-color: var(--accent); color: var(--accent); }
+.cls-dica { color: var(--ok); } .cls-dica code { font-family: var(--f-mono); font-size: .8rem; }
 </style>
 </head>
 <body>
@@ -347,6 +360,7 @@ details.step > summary:focus-visible { outline: 2px solid var(--accent); outline
       <div class="step-tit">
         <h2 id="gradeTitulo">Monte a grade</h2>
         <p class="note">Clique no <b>+</b> de um horário para ver o que é ofertado. Cada horário vale 15h: disciplina de 30h ocupa 2 horários.</p>
+        <p class="note cls-dica" id="clsDica" hidden></p>
       </div>
       <div class="step-acoes">
         <button class="btn small" id="btnClsImport" type="button" title="Arquivo local assets/classroom-<bimestre>.xlsx gerado pelo build. Os códigos ficam só neste navegador.">Importar códigos do Classroom</button>
@@ -709,7 +723,7 @@ function criarMulti(id, placeholder, aoMudar, itemCurto) {
   const el = $(id);
   el.addEventListener('change', () => aoMudar(el.tomselect ? el.tomselect.getValue() : valoresDe(el)));
   if (!window.TomSelect) return null;
-  return new TomSelect(el, {
+  const ts = new TomSelect(el, {
     plugins: { remove_button: { title: 'Remover' }, clear_button: { title: 'Limpar' }, checkbox_options: {} },
     placeholder, maxOptions: null, hidePlaceholder: true, closeAfterSelect: false,
     searchField: ['text', 'value'], lockOptgroupOrder: true,
@@ -719,6 +733,20 @@ function criarMulti(id, placeholder, aoMudar, itemCurto) {
       ...(itemCurto ? { item: (d, e) => `<div title="${e(d.text.replace(/^★ /, ''))}">${e(d.value)}</div>` } : {}),
     },
   });
+  // topo da lista: "Selecionar todos" (respeita o que foi digitado na busca) e "Limpar"
+  const barra = document.createElement('div');
+  barra.className = 'ts-acoes';
+  barra.innerHTML = '<button type="button" data-a="todos">Selecionar todos</button><button type="button" data-a="nenhum">Limpar</button>';
+  barra.addEventListener('mousedown', e => e.preventDefault());   // não fecha a lista nem perde o foco
+  barra.addEventListener('click', e => {
+    const a = e.target.closest('button')?.dataset.a; if (!a) return;
+    if (a === 'nenhum') { ts.clear(); return; }
+    const visiveis = ts.lastQuery ? ts.currentResults.items.map(i => i.id) : Object.keys(ts.options);
+    ts.setValue([...new Set([...ts.getValue(), ...visiveis])]);
+    ts.refreshOptions(false);
+  });
+  ts.dropdown.prepend(barra);
+  return ts;
 }
 const tsTurma = criarMulti('selTurma', 'Todas as turmas', v => { filt.turmas = v; renderAll(); });
 const tsCode = criarMulti('selCode', 'Todas as disciplinas', v => { filt.codes = v; renderAll(); }, true);
@@ -1023,6 +1051,9 @@ preencherAluno();
 function renderClassroomBotoes() {
   $('btnClsLimpar').hidden = !temClassroom();
   $('btnClsImport').textContent = temClassroom() ? 'Trocar códigos do Classroom' : 'Importar códigos do Classroom';
+  // dica enquanto não há códigos: eles não vêm do site, só do arquivo local
+  $('clsDica').hidden = temClassroom() || !BIM;
+  $('clsDica').innerHTML = `Os códigos do Classroom não ficam no site público. Para vê-los nos quadros, clique em <b>Importar códigos do Classroom</b> e escolha o arquivo <code>assets/classroom-${esc(BIM)}.xlsx</code> do projeto.`;
 }
 $('btnClsImport').onclick = () => {
   if (!BIM) { toast('Escolha o bimestre primeiro.'); return; }

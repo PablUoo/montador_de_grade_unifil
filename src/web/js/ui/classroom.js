@@ -2,6 +2,9 @@
 function renderClassroomBotoes() {
   $('btnClsLimpar').hidden = !temClassroom();
   $('btnClsImport').textContent = temClassroom() ? 'Trocar códigos do Classroom' : 'Importar códigos do Classroom';
+  // dica enquanto não há códigos: eles não vêm do site, só do arquivo local
+  $('clsDica').hidden = temClassroom() || !BIM;
+  $('clsDica').innerHTML = `Os códigos do Classroom não ficam no site público. Para vê-los nos quadros, clique em <b>Importar códigos do Classroom</b> e escolha o arquivo <code>assets/classroom-${esc(BIM)}.xlsx</code> do projeto.`;
 }
 $('btnClsImport').onclick = () => {
   if (!BIM) { toast('Escolha o bimestre primeiro.'); return; }
